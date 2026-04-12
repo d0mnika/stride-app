@@ -4,7 +4,7 @@ import { createMiddlewareClient } from '@/lib/supabase/middleware'
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ['/login', '/signup']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request })
   const supabase = createMiddlewareClient(request, response)
 
