@@ -151,6 +151,37 @@ When (re)scheduling, Stride:
 
 ---
 
+## Business Model
+
+Stride is a **SaaS with a subscription (free vs. paid) model.**
+
+Every feature that is not part of the free tier must be implemented with a **locked state** — a disabled/greyed-out UI that signals the feature exists and prompts upgrade, rather than hiding it entirely. This keeps the upgrade path visible and reduces surprise for free users.
+
+### Tier boundaries (to be finalised — treat as tentative)
+
+| Feature | Free | Paid |
+|---|---|---|
+| Create exams & materials | Limited (e.g. 1 active exam) | Unlimited |
+| Smart Timer | ✓ | ✓ |
+| Basic schedule generation | ✓ | ✓ |
+| Automatic delay recalculation | ✓ | ✓ |
+| Exam priority weighting | locked | ✓ |
+| Revision day scheduling | locked | ✓ |
+| Crunch mode warning | locked | ✓ |
+| Low energy day | locked | ✓ |
+| Streak tracking | ✓ | ✓ |
+| Focus mode | locked | ✓ |
+| AI summaries | locked | ✓ |
+| AI quizzes | locked | ✓ |
+
+### Implementation rules
+- Check subscription status server-side (Supabase profile) — never trust the client alone.
+- Locked UI: render the feature visibly but disabled, with an "Upgrade" prompt. Do **not** simply hide it.
+- Never silently degrade — if a free user hits a limit, show a clear, friendly message explaining why and how to unlock it.
+- Subscription state will be stored in the `profiles` table (a `plan` column to be added when billing is integrated).
+
+---
+
 ## Key Features
 
 ### Smart Timer
@@ -295,3 +326,4 @@ npm run typecheck  # tsc --noEmit
 - Scheduler logic is **pure TypeScript** (no React) so it can be unit-tested and run in a service worker.
 - Time is stored in **UTC** in the database. Convert to local time only in the UI layer.
 - `unit_label` (page, slide, note) is display-only. All math uses plain integers.
+- **Subscription gating:** premium features are rendered in a locked/disabled state for free users — never hidden outright. Gate checks happen server-side.
