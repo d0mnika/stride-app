@@ -5,12 +5,12 @@ import FocusClient from './FocusClient'
 
 export default async function FocusPage() {
   const supabase = await createServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/login')
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) redirect('/login')
 
   const [materials, exams] = await Promise.all([
     getAllMaterials(supabase),
-    getExams(supabase, session.user.id),
+    getExams(supabase, user.id),
   ])
 
   return (
@@ -18,7 +18,7 @@ export default async function FocusPage() {
       <FocusClient
         materials={materials}
         exams={exams}
-        userId={session.user.id}
+        userId={user.id}
       />
     </main>
   )

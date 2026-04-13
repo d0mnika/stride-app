@@ -8,8 +8,10 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request })
   const supabase = createMiddlewareClient(request, response)
 
-  // Refresh the session — this keeps the auth cookie alive and up to date.
-  // Always await this before checking the session.
+  // getSession() is intentional here — getUser() would add a round-trip to
+  // the Supabase Auth server on every request, which is too expensive for a
+  // proxy. We only use the session to decide redirects, not to trust user data.
+  // Server components use getUser() for any sensitive operations.
   const { data: { session } } = await supabase.auth.getSession()
 
   const { pathname } = request.nextUrl
