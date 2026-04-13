@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Timer from '@/components/Timer'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import { createSession } from '@/lib/supabase/helpers'
+import { formatTime } from '@/lib/timer'
 import type { StudyMaterial, Exam } from '@/types'
 import type { SessionResult } from '@/components/Timer'
 
@@ -12,6 +13,13 @@ interface FocusClientProps {
   materials: StudyMaterial[]
   exams: Exam[]
   userId: string
+}
+
+interface PaceSummary {
+  unitsCompleted: number
+  timeSpentSec: number
+  unitLabel: string
+  materialTitle: string
 }
 
 const DURATIONS = [
@@ -24,11 +32,11 @@ export default function FocusClient({ materials, exams, userId }: FocusClientPro
   const router = useRouter()
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('')
   const [durationSec, setDurationSec] = useState(25 * 60)
-  const [sessionKey, setSessionKey] = useState(0) // increment to remount Timer
+  const [sessionKey, setSessionKey] = useState(0)
+  const [summary, setSummary] = useState<PaceSummary | null>(null)
 
   const selectedMaterial = materials.find(m => m.id === selectedMaterialId)
 
-  // Group materials by exam for the selector
   const byExam = exams.map(exam => ({
     exam,
     materials: materials.filter(m => m.exam_id === exam.id),
@@ -36,6 +44,7 @@ export default function FocusClient({ materials, exams, userId }: FocusClientPro
 
   async function handleSave(result: SessionResult) {
     const supabase = getSupabaseClient()
+    const mat = materials.find(m => m.id === result.materialId)
     await createSession(supabase, {
       material_id: result.materialId,
       user_id: userId,
@@ -43,10 +52,63 @@ export default function FocusClient({ materials, exams, userId }: FocusClientPro
       time_spent_sec: result.timeSpentSec,
       session_date: result.sessionDate,
     })
-    // Reset to selector after saving
+    setSummary({
+      unitsCompleted: result.unitsCompleted,
+      timeSpentSec: result.timeSpentSec,
+      unitLabel: mat?.unit_label ?? 'unit',
+      materialTitle: mat?.title ?? '',
+    })
     setSelectedMaterialId('')
     setSessionKey(k => k + 1)
     router.refresh()
+  }
+
+  function handleStartAnother() {
+    setSummary(null)
+  }
+
+  // ─── Pace summary screen ────────────────────────────────────────────────────
+  if (summary) {
+    const minutes = summary.timeSpentSec / 60
+    const pace = minutes > 0 ? summary.unitsCompleted / minutes : 0
+
+    return (
+      <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
+        <div>
+          <p className="text-4xl font-bold text-gray-900">
+            {pace > 0 ? pace.toFixed(1) : '—'}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            {summary.unitLabel}s per minute
+          </p>
+        </div>
+
+        <div className="w-full rounded-xl border border-gray-100 bg-white divide-y divide-gray-100 text-sm">
+          <div className="flex justify-between px-4 py-3">
+            <span className="text-gray-500">Material</span>
+            <span className="font-medium text-gray-900 text-right max-w-[55%] truncate">
+              {summary.materialTitle}
+            </span>
+          </div>
+          <div className="flex justify-between px-4 py-3">
+            <span className="text-gray-500">{summary.unitLabel}s completed</span>
+            <span className="font-medium text-gray-900">{summary.unitsCompleted}</span>
+          </div>
+          <div className="flex justify-between px-4 py-3">
+            <span className="text-gray-500">Time spent</span>
+            <span className="font-medium text-gray-900">{formatTime(summary.timeSpentSec)}</span>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-400">
+          Stride uses this pace to build your study plan.
+        </p>
+
+        <button onClick={handleStartAnother} className={btnPrimary}>
+          Start another session
+        </button>
+      </div>
+    )
   }
 
   // ─── No materials yet ───────────────────────────────────────────────────────
@@ -70,7 +132,6 @@ export default function FocusClient({ materials, exams, userId }: FocusClientPro
           <p className="mt-1 text-sm text-gray-500">Pick what you&apos;re studying today</p>
         </div>
 
-        {/* Material picker */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
           <select
@@ -91,7 +152,6 @@ export default function FocusClient({ materials, exams, userId }: FocusClientPro
           </select>
         </div>
 
-        {/* Duration picker */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Session length</label>
           <div className="flex gap-2">
@@ -111,7 +171,6 @@ export default function FocusClient({ materials, exams, userId }: FocusClientPro
           </div>
         </div>
 
-        {/* Selection already committed — button is just a visual CTA; disabled until a material is chosen */}
         <p className="text-center text-sm text-gray-400">
           {selectedMaterialId ? 'Ready — the timer will start on the next screen.' : 'Select a material above to continue.'}
         </p>
@@ -130,3 +189,5 @@ export default function FocusClient({ materials, exams, userId }: FocusClientPro
     />
   )
 }
+
+const btnPrimary = 'rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 transition'

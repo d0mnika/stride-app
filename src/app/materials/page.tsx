@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
-import { getExams, getAllMaterials } from '@/lib/supabase/helpers'
+import { getExams, getAllMaterials, getSessionsByUser } from '@/lib/supabase/helpers'
 import MaterialsClient from './MaterialsClient'
 
 export default async function MaterialsPage() {
@@ -8,9 +8,10 @@ export default async function MaterialsPage() {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
-  const [exams, materials] = await Promise.all([
+  const [exams, materials, sessions] = await Promise.all([
     getExams(supabase, user.id),
     getAllMaterials(supabase),
+    getSessionsByUser(supabase, user.id),
   ])
 
   return (
@@ -25,7 +26,12 @@ export default async function MaterialsPage() {
             ← Dashboard
           </a>
         </div>
-        <MaterialsClient userId={user.id} initialExams={exams} initialMaterials={materials} />
+        <MaterialsClient
+          userId={user.id}
+          initialExams={exams}
+          initialMaterials={materials}
+          initialSessions={sessions}
+        />
       </div>
     </main>
   )

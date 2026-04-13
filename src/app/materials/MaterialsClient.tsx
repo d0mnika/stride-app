@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Trash2, PlusCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import {
   createExam, deleteExam,
   createMaterial, deleteMaterial,
 } from '@/lib/supabase/helpers'
-import type { Exam, ExamInsert, StudyMaterial, StudyMaterialInsert } from '@/types'
+import { calculatePace } from '@/lib/scheduler'
+import type { Exam, ExamInsert, StudyMaterial, StudyMaterialInsert, StudySession } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,35 +16,31 @@ interface Props {
   userId: string
   initialExams: Exam[]
   initialMaterials: StudyMaterial[]
+  initialSessions: StudySession[]
 }
 
 const MATERIAL_TYPES = ['book', 'slides', 'notes', 'other'] as const
 type MaterialType = typeof MATERIAL_TYPES[number]
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Root component ───────────────────────────────────────────────────────────
 
-export default function MaterialsClient({ userId, initialExams, initialMaterials }: Props) {
+export default function MaterialsClient({ userId, initialExams, initialMaterials, initialSessions }: Props) {
   const [exams, setExams] = useState<Exam[]>(initialExams)
   const [materials, setMaterials] = useState<StudyMaterial[]>(initialMaterials)
+  const [sessions] = useState<StudySession[]>(initialSessions)
   const [showExamForm, setShowExamForm] = useState(false)
 
-  // ─── Exam form state ──────────────────────────────────────────────────────
   const [examForm, setExamForm] = useState({
-    subject: '',
-    exam_date: '',
-    priority: 1,
-    revision_days: 1,
+    subject: '', exam_date: '', priority: 1, revision_days: 1,
   })
   const [examError, setExamError] = useState<string | null>(null)
   const [examSaving, setExamSaving] = useState(false)
 
-  async function handleAddExam(e: React.FormEvent) {
+  async function handleAddExam(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setExamError(null)
     setExamSaving(true)
@@ -79,8 +76,6 @@ export default function MaterialsClient({ userId, initialExams, initialMaterials
     }
   }
 
-  // ─── Material callbacks (passed down to ExamCard) ─────────────────────────
-
   function handleMaterialAdded(material: StudyMaterial) {
     setMaterials(prev => [...prev, material])
   }
@@ -89,11 +84,8 @@ export default function MaterialsClient({ userId, initialExams, initialMaterials
     setMaterials(prev => prev.filter(m => m.id !== materialId))
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Exam list */}
       {exams.length === 0 && !showExamForm && (
         <p className="text-sm text-gray-400 text-center py-8">No exams yet. Add your first one below.</p>
       )}
@@ -103,14 +95,13 @@ export default function MaterialsClient({ userId, initialExams, initialMaterials
           key={exam.id}
           exam={exam}
           materials={materials.filter(m => m.exam_id === exam.id)}
-          userId={userId}
+          sessions={sessions}
           onDeleteExam={handleDeleteExam}
           onMaterialAdded={handleMaterialAdded}
           onMaterialDeleted={handleMaterialDeleted}
         />
       ))}
 
-      {/* Add exam form */}
       {showExamForm ? (
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">New exam</h2>
@@ -140,10 +131,7 @@ export default function MaterialsClient({ userId, initialExams, initialMaterials
               <div>
                 <label className={labelCls}>Priority (1 = low)</label>
                 <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  required
+                  type="number" min={1} max={10} required
                   value={examForm.priority}
                   onChange={e => setExamForm(f => ({ ...f, priority: Number(e.target.value) }))}
                   className={inputCls}
@@ -152,16 +140,13 @@ export default function MaterialsClient({ userId, initialExams, initialMaterials
               <div className="col-span-2">
                 <label className={labelCls}>Revision days before exam</label>
                 <input
-                  type="number"
-                  min={0}
-                  max={14}
-                  required
+                  type="number" min={0} max={14} required
                   value={examForm.revision_days}
                   onChange={e => setExamForm(f => ({ ...f, revision_days: Number(e.target.value) }))}
                   className={inputCls}
                 />
                 <p className="mt-1 text-xs text-gray-400">
-                  These days will be blocked from new material — reserved for review only.
+                  These days are blocked from new material — reserved for review only.
                 </p>
               </div>
             </div>
@@ -172,11 +157,7 @@ export default function MaterialsClient({ userId, initialExams, initialMaterials
               <button type="submit" disabled={examSaving} className={btnPrimary}>
                 {examSaving ? 'Saving…' : 'Add exam'}
               </button>
-              <button
-                type="button"
-                onClick={() => { setShowExamForm(false); setExamError(null) }}
-                className={btnGhost}
-              >
+              <button type="button" onClick={() => { setShowExamForm(false); setExamError(null) }} className={btnGhost}>
                 Cancel
               </button>
             </div>
@@ -200,20 +181,17 @@ export default function MaterialsClient({ userId, initialExams, initialMaterials
 interface ExamCardProps {
   exam: Exam
   materials: StudyMaterial[]
-  userId: string
+  sessions: StudySession[]
   onDeleteExam: (id: string) => void
   onMaterialAdded: (m: StudyMaterial) => void
   onMaterialDeleted: (id: string) => void
 }
 
-function ExamCard({ exam, materials, userId, onDeleteExam, onMaterialAdded, onMaterialDeleted }: ExamCardProps) {
+function ExamCard({ exam, materials, sessions, onDeleteExam, onMaterialAdded, onMaterialDeleted }: ExamCardProps) {
   const [expanded, setExpanded] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
-    title: '',
-    type: 'book' as MaterialType,
-    total_units: '',
-    unit_label: 'page',
+    title: '', type: 'book' as MaterialType, total_units: '', unit_label: 'page',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -222,7 +200,7 @@ function ExamCard({ exam, materials, userId, onDeleteExam, onMaterialAdded, onMa
     (new Date(exam.exam_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   )
 
-  async function handleAddMaterial(e: React.FormEvent) {
+  async function handleAddMaterial(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setSaving(true)
@@ -271,10 +249,8 @@ function ExamCard({ exam, materials, userId, onDeleteExam, onMaterialAdded, onMa
               {new Date(exam.exam_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
               {' · '}
               {daysUntil > 0 ? `${daysUntil}d away` : daysUntil === 0 ? 'Today!' : 'Past'}
-              {' · '}
-              Priority {exam.priority}
-              {' · '}
-              {exam.revision_days}d revision
+              {' · '}Priority {exam.priority}
+              {' · '}{exam.revision_days}d revision
             </p>
           </div>
           <span className="ml-2 shrink-0 text-gray-400">
@@ -297,23 +273,32 @@ function ExamCard({ exam, materials, userId, onDeleteExam, onMaterialAdded, onMa
             <p className="text-xs text-gray-400 py-1">No materials yet.</p>
           )}
 
-          {materials.map(m => (
-            <div key={m.id} className="flex items-center justify-between py-1.5">
-              <div>
-                <p className="text-sm text-gray-800">{m.title}</p>
-                <p className="text-xs text-gray-400">
-                  {m.total_units} {m.unit_label}s · {m.type}
-                </p>
+          {materials.map(m => {
+            const pace = calculatePace(sessions, m.id, 0)
+            const hasPace = pace > 0
+            return (
+              <div key={m.id} className="flex items-center justify-between py-1.5">
+                <div>
+                  <p className="text-sm text-gray-800">{m.title}</p>
+                  <p className="text-xs text-gray-400">
+                    {m.total_units} {m.unit_label}s · {m.type}
+                    {hasPace && (
+                      <span className="ml-2 text-gray-500 font-medium">
+                        · {pace.toFixed(1)} {m.unit_label}s/min
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleDeleteMaterial(m.id)}
+                  className="p-1.5 text-gray-300 hover:text-red-500 transition"
+                  title="Delete material"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
-              <button
-                onClick={() => handleDeleteMaterial(m.id)}
-                className="p-1.5 text-gray-300 hover:text-red-500 transition"
-                title="Delete material"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
+            )
+          })}
 
           {/* Add material form */}
           {showForm ? (
@@ -336,9 +321,7 @@ function ExamCard({ exam, materials, userId, onDeleteExam, onMaterialAdded, onMa
                     onChange={e => setForm(f => ({ ...f, type: e.target.value as MaterialType }))}
                     className={inputCls}
                   >
-                    {MATERIAL_TYPES.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    {MATERIAL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
@@ -353,10 +336,7 @@ function ExamCard({ exam, materials, userId, onDeleteExam, onMaterialAdded, onMa
                 <div className="col-span-2">
                   <label className={labelCls}>Total units</label>
                   <input
-                    type="number"
-                    required
-                    min={1}
-                    placeholder="e.g. 320"
+                    type="number" required min={1} placeholder="e.g. 320"
                     value={form.total_units}
                     onChange={e => setForm(f => ({ ...f, total_units: e.target.value }))}
                     className={inputCls}
@@ -370,11 +350,7 @@ function ExamCard({ exam, materials, userId, onDeleteExam, onMaterialAdded, onMa
                 <button type="submit" disabled={saving} className={btnPrimary}>
                   {saving ? 'Saving…' : 'Add material'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowForm(false); setError(null) }}
-                  className={btnGhost}
-                >
+                <button type="button" onClick={() => { setShowForm(false); setError(null) }} className={btnGhost}>
                   Cancel
                 </button>
               </div>
