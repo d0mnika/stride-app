@@ -27,8 +27,8 @@ export default function PrivacyPage() {
             <p>
               Stride is a study planning application operated by an individual developer.
               If you have any questions about this policy, you can contact us at{' '}
-              <a href="mailto:dominikadobranowska@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
-                dominikadobranowska@gmail.com
+              <a href="mailto:strideapp.contact@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
+                strideapp.contact@gmail.com
               </a>.
             </p>
           </section>
@@ -107,8 +107,8 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-3">
               To exercise any of these rights, email us at{' '}
-              <a href="mailto:dominikadobranowska@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
-                dominikadobranowska@gmail.com
+              <a href="mailto:strideapp.contact@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
+                strideapp.contact@gmail.com
               </a>. We will respond within 30 days.
             </p>
           </section>

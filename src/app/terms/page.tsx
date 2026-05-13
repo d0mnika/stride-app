@@ -154,8 +154,8 @@ export default function TermsPage() {
             <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">13. Contact</h2>
             <p>
               For any questions about these terms, contact us at{' '}
-              <a href="mailto:dominikadobranowska@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
-                dominikadobranowska@gmail.com
+              <a href="mailto:strideapp.contact@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
+                strideapp.contact@gmail.com
               </a>.
             </p>
           </section>
