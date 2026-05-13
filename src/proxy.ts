@@ -4,6 +4,9 @@ import { createMiddlewareClient } from '@/lib/supabase/middleware'
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ['/login', '/signup', '/api/stripe/webhook', '/privacy', '/terms']
 
+// Authenticated users are redirected away from these routes only
+const AUTH_ONLY_REDIRECT = ['/login', '/signup']
+
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request })
   const supabase = createMiddlewareClient(request, response)
@@ -25,7 +28,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Authenticated user visiting login/signup → send to dashboard
-  if (session && isPublicRoute) {
+  if (session && AUTH_ONLY_REDIRECT.some(r => pathname.startsWith(r))) {
     const dashboardUrl = request.nextUrl.clone()
     dashboardUrl.pathname = '/dashboard'
     return NextResponse.redirect(dashboardUrl)
