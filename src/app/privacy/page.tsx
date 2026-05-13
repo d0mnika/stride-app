@@ -101,7 +101,7 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-6 space-y-2">
               <li>Access the personal data we hold about you.</li>
               <li>Correct inaccurate data.</li>
-              <li>Request deletion of your account and associated data.</li>
+              <li>Delete your account and all associated data — you can do this directly from the Account page at any time.</li>
               <li>Export your data in a portable format.</li>
               <li>Object to or restrict processing in certain circumstances.</li>
             </ul>
@@ -115,10 +115,15 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">9. Data retention</h2>
+            <p className="mb-3">
+              We retain your data for as long as your account is active. If you delete your account
+              (via the Account page or by contacting us), all personal data — including your exams,
+              materials, sessions, and profile — is deleted immediately from our systems.
+            </p>
             <p>
-              We retain your data for as long as your account is active. If you delete your account,
-              all personal data is deleted within 30 days, except where we are required to retain it
-              for legal or financial record-keeping purposes (e.g. billing records for up to 7 years).
+              We may retain billing-related records (e.g. Stripe transaction IDs) for up to 7 years
+              to comply with financial record-keeping obligations under Polish law. These records contain
+              no study data and are held solely for tax and legal compliance purposes.
             </p>
           </section>
 
