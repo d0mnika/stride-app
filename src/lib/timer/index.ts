@@ -46,10 +46,17 @@ export function createTimer(options: TimerOptions = {}): Timer {
   const durationSec = options.durationSec ?? 25 * 60
 
   let status: TimerStatus = 'idle'
-  let elapsedSec = 0
+  let accumulatedSec = 0         // elapsed before the current running segment
+  let segmentStartMs: number | null = null  // wall-clock start of current segment
   let intervalId: ReturnType<typeof setInterval> | null = null
 
+  function computeElapsedSec(): number {
+    if (segmentStartMs === null) return accumulatedSec
+    return accumulatedSec + (Date.now() - segmentStartMs) / 1000
+  }
+
   function snapshot(): TimerState {
+    const elapsedSec = Math.floor(computeElapsedSec())
     return {
       status,
       elapsedSec,
@@ -59,13 +66,13 @@ export function createTimer(options: TimerOptions = {}): Timer {
   }
 
   function tick() {
-    elapsedSec += 1
-    const state = snapshot()
-    options.onTick?.(state)
+    const elapsedSec = Math.floor(computeElapsedSec())
+    options.onTick?.({ status, elapsedSec, remainingSec: Math.max(0, durationSec - elapsedSec), durationSec })
 
     if (elapsedSec >= durationSec) {
-      clearInterval(intervalId!)
-      intervalId = null
+      clearTick()
+      accumulatedSec = durationSec
+      segmentStartMs = null
       status = 'completed'
       options.onComplete?.(snapshot())
     }
@@ -82,11 +89,14 @@ export function createTimer(options: TimerOptions = {}): Timer {
     start() {
       if (status !== 'idle') return
       status = 'running'
+      segmentStartMs = Date.now()
       intervalId = setInterval(tick, 1000)
     },
 
     pause() {
       if (status !== 'running') return
+      accumulatedSec = Math.floor(computeElapsedSec())
+      segmentStartMs = null
       status = 'paused'
       clearTick()
     },
@@ -94,15 +104,20 @@ export function createTimer(options: TimerOptions = {}): Timer {
     resume() {
       if (status !== 'paused') return
       status = 'running'
+      segmentStartMs = Date.now()
       intervalId = setInterval(tick, 1000)
     },
 
     stop() {
+      accumulatedSec = Math.floor(computeElapsedSec())
+      segmentStartMs = null
       clearTick()
       status = 'stopped'
     },
 
     finish() {
+      accumulatedSec = Math.floor(computeElapsedSec())
+      segmentStartMs = null
       clearTick()
       status = 'completed'
       options.onComplete?.(snapshot())

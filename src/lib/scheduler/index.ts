@@ -16,6 +16,7 @@ export interface SchedulerInput {
   sessions: StudySession[]
   availableDays: AvailableDay[]
   defaultPaceUnitsPerMin: number
+  maxSubjectsPerDay?: number | null
 }
 
 export interface ScheduleSlot {
@@ -115,9 +116,6 @@ export function computeAvailableDays(
 
   let current = startDate
   while (current <= endDate) {
-    // UTC day boundaries for this date string
-    const dayStartMs = Date.UTC(...(current.split('-').map(Number) as [number, number, number]), -1, 0, 0, 0)
-    // Simpler: parse as UTC midnight
     const [cy, cm, cd] = current.split('-').map(Number)
     const dayStartUTC = Date.UTC(cy, cm - 1, cd, 0, 0, 0, 0)
     const dayEndUTC   = Date.UTC(cy, cm - 1, cd, 23, 59, 59, 999)
@@ -140,6 +138,40 @@ export function computeAvailableDays(
     current = addDays(current, 1)
   }
 
+  return result
+}
+
+// ─── Recurring event expansion ───────────────────────────────────────────────
+
+// Expands recurring weekly events into concrete time blocks for a date range.
+// Times are treated as local-clock times (consistent with how todayStr works).
+// Returns objects shaped like CalendarEvent so they can be merged with one-off
+// events and passed directly to computeAvailableDays.
+export function expandRecurringEvents(
+  recurring: Array<{ day_of_week: number; start_time: string; end_time: string }>,
+  startDate: string,
+  endDate: string
+): Array<{ start_time: string; end_time: string; id: string; user_id: string; title: string | null; created_at: string }> {
+  const result: Array<{ start_time: string; end_time: string; id: string; user_id: string; title: string | null; created_at: string }> = []
+  let current = startDate
+  while (current <= endDate) {
+    const [y, m, d] = current.split('-').map(Number)
+    const jsDay = new Date(y, m - 1, d).getDay() // 0=Sun … 6=Sat
+    for (const ev of recurring) {
+      if (ev.day_of_week !== jsDay) continue
+      const [sh, sm] = ev.start_time.split(':').map(Number)
+      const [eh, em] = ev.end_time.split(':').map(Number)
+      result.push({
+        id: `recurring-${current}-${ev.day_of_week}-${ev.start_time}`,
+        user_id: '',
+        title: null,
+        created_at: '',
+        start_time: new Date(y, m - 1, d, sh, sm, 0).toISOString(),
+        end_time:   new Date(y, m - 1, d, eh, em, 0).toISOString(),
+      })
+    }
+    current = addDays(current, 1)
+  }
   return result
 }
 
@@ -170,8 +202,6 @@ export function applyLowEnergyDay(days: AvailableDay[], date: string): Available
 export function generateSchedule(input: SchedulerInput): ScheduleSlot[] {
   const slots: ScheduleSlot[] = []
 
-  const examById = new Map(input.exams.map(e => [e.id, e]))
-
   const materialsByExam = new Map<string, StudyMaterial[]>()
   for (const m of input.materials) {
     const list = materialsByExam.get(m.exam_id) ?? []
@@ -193,6 +223,33 @@ export function generateSchedule(input: SchedulerInput): ScheduleSlot[] {
 
   const sortedDays = [...input.availableDays].sort((a, b) => a.date.localeCompare(b.date))
 
+  // How many of the initial active exams are there?
+  // Used to scale up the daily cap when subjects rotate (each exam only gets 1/N of days).
+  const initialActiveExamIds = new Set(
+    [...remaining.keys()].map(matId => input.materials.find(m => m.id === matId)!.exam_id)
+  )
+  const totalInitialExams = initialActiveExamIds.size
+  // rotationFactor < 1 when subjects rotate: each exam is studied on fewer days than total.
+  const rotationFactor = input.maxSubjectsPerDay && totalInitialExams > 1
+    ? Math.min(1, input.maxSubjectsPerDay / totalInitialExams)
+    : 1
+
+  // Pre-compute per-material daily cap so work spreads evenly across assigned study days.
+  // When subjects rotate, each exam's effective study days shrink proportionally,
+  // so the cap scales up (you study longer on the days you do show up).
+  const dailyCap = new Map<string, number>()
+  for (const [matId, rem] of remaining.entries()) {
+    const material = input.materials.find(m => m.id === matId)!
+    const exam     = input.exams.find(e => e.id === material.exam_id)!
+    const lastStudyDate = addDays(exam.exam_date, -(exam.revision_days + 1))
+    const studyDays = sortedDays.filter(d => d.date <= lastStudyDate).length
+    const effectiveDays = Math.max(1, Math.ceil(studyDays * rotationFactor))
+    dailyCap.set(matId, Math.ceil(rem / effectiveDays))
+  }
+
+  // Tracks the last date each exam was assigned — drives the round-robin rotation.
+  const lastAssignedDate = new Map<string, string>() // examId → YYYY-MM-DD
+
   for (const day of sortedDays) {
     if (remaining.size === 0) break
     if (day.availableMinutes <= 0) continue
@@ -208,9 +265,51 @@ export function generateSchedule(input: SchedulerInput): ScheduleSlot[] {
 
     if (activeExams.length === 0) continue
 
-    const totalPriority = activeExams.reduce((n, e) => n + e.priority, 0)
+    let scheduledExams: Exam[]
+    if (input.maxSubjectsPerDay && input.maxSubjectsPerDay < activeExams.length) {
+      // Score each exam: urgency × priority × how overdue it is for a session.
+      // Exams never yet assigned get daysSinceLast=999 so they are always picked first.
+      // After the first full rotation the score naturally cycles subjects in priority+urgency order.
+      const [dy, dm, dd] = day.date.split('-').map(Number)
+      const dayMs = Date.UTC(dy, dm - 1, dd)
 
-    for (const exam of activeExams) {
+      const scored = activeExams.map(exam => {
+        const lastDate = lastAssignedDate.get(exam.id)
+        let daysSinceLast = 999
+        if (lastDate) {
+          const [ly, lm, ld] = lastDate.split('-').map(Number)
+          daysSinceLast = Math.round((dayMs - Date.UTC(ly, lm - 1, ld)) / 86_400_000)
+        }
+
+        const examMaterials = materialsByExam.get(exam.id) ?? []
+        const remForExam = examMaterials.reduce((s, m) => s + (remaining.get(m.id) ?? 0), 0)
+
+        const [ey, em, ed] = exam.exam_date.split('-').map(Number)
+        const daysUntilExam = Math.max(1, Math.round((Date.UTC(ey, em - 1, ed) - dayMs) / 86_400_000))
+
+        // urgency = units still needed per day until exam
+        const urgency = remForExam / daysUntilExam
+        // daysSinceLast^1.2 gives a gentle "overdue" boost without drowning out urgency
+        const score = urgency * exam.priority * Math.pow(daysSinceLast, 1.2)
+        return { exam, score }
+      })
+
+      scheduledExams = scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, input.maxSubjectsPerDay)
+        .map(s => s.exam)
+    } else {
+      scheduledExams = activeExams
+    }
+
+    // Update rotation tracker for the exams assigned today
+    for (const exam of scheduledExams) {
+      lastAssignedDate.set(exam.id, day.date)
+    }
+
+    const totalPriority = scheduledExams.reduce((n, e) => n + e.priority, 0)
+
+    for (const exam of scheduledExams) {
       const examShare = (exam.priority / totalPriority) * day.availableMinutes
 
       const activeMaterials = (materialsByExam.get(exam.id) ?? []).filter(
@@ -224,7 +323,8 @@ export function generateSchedule(input: SchedulerInput): ScheduleSlot[] {
         const matRem     = remaining.get(material.id) ?? 0
         const matShare   = (matRem / totalRemForExam) * examShare
         const pace       = paceFor.get(material.id) ?? input.defaultPaceUnitsPerMin
-        const unitsTarget = Math.min(Math.floor(matShare * pace), matRem)
+        const cap        = dailyCap.get(material.id) ?? matRem
+        const unitsTarget = Math.min(Math.floor(matShare * pace), cap, matRem)
 
         if (unitsTarget <= 0) continue
 
@@ -248,6 +348,42 @@ export function generateSchedule(input: SchedulerInput): ScheduleSlot[] {
 // uses actual session data, not schedule targets.
 export function detectSlipUps(schedules: Schedule[], today: string): Schedule[] {
   return schedules.filter(s => !s.is_done && s.slot_date < today)
+}
+
+// ─── Streak tracking ─────────────────────────────────────────────────────────
+
+// Counts consecutive days where the user completed at least one scheduled session.
+// Days with no schedule slots are skipped — they do NOT break the streak.
+export function calculateStreak(
+  schedules: Schedule[],
+  sessions: StudySession[],
+  today: string,
+): number {
+  // Study sessions are never deleted — use them as the source of truth.
+  // Done schedule slots are also kept as a fallback for sessions recorded
+  // via the dashboard "Done" button without a separate session row.
+  const workedDates = new Set([
+    ...sessions.map(s => s.session_date),
+    ...schedules.filter(s => s.is_done).map(s => s.slot_date),
+  ])
+
+  // If nothing done today yet, start counting from yesterday so today's
+  // pending slots don't penalise the user before the day is over.
+  const start = workedDates.has(today) ? today : addDays(today, -1)
+
+  let streak = 0
+  let current = start
+
+  for (let i = 0; i < 365; i++) {
+    if (workedDates.has(current)) {
+      streak++
+    } else {
+      break // any past day without recorded work breaks the streak
+    }
+    current = addDays(current, -1)
+  }
+
+  return streak
 }
 
 // ─── Crunch mode ─────────────────────────────────────────────────────────────
@@ -284,4 +420,107 @@ export function checkCrunchMode(input: SchedulerInput): CrunchWarning[] {
   }
 
   return warnings
+}
+
+// ─── Study block placement ────────────────────────────────────────────────────
+
+export interface StudyBlockPlacement {
+  start_time: string // "HH:MM"
+  end_time: string
+}
+
+const CAL_START = 6 * 60   // 06:00
+const CAL_END   = 23 * 60  // 23:00
+
+type Interval = [number, number]
+
+function buildFreeGaps(params: {
+  recurringEventsForDay: Array<{ start_time: string; end_time: string }>
+  oneOffEventsForDay: Array<{ start_time: string; end_time: string }>
+  nightEndMin: number
+  nightStartMin: number
+  bufferMin: number
+}): Interval[] {
+  const { recurringEventsForDay, oneOffEventsForDay, nightEndMin, nightStartMin, bufferMin } = params
+  const blocked: Interval[] = []
+
+  const wakeEnd = Math.min(CAL_END, nightEndMin + bufferMin)
+  if (wakeEnd > CAL_START) blocked.push([CAL_START, wakeEnd])
+  if (nightStartMin < CAL_END) blocked.push([nightStartMin, CAL_END])
+
+  for (const ev of [...recurringEventsForDay, ...oneOffEventsForDay]) {
+    blocked.push([
+      Math.max(CAL_START, parseTimeMinutes(ev.start_time) - bufferMin),
+      Math.min(CAL_END,   parseTimeMinutes(ev.end_time)   + bufferMin),
+    ])
+  }
+
+  blocked.sort((a, b) => a[0] - b[0])
+  const merged: Interval[] = []
+  for (const [s, e] of blocked) {
+    if (!merged.length || s > merged[merged.length - 1][1]) merged.push([s, e])
+    else merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e)
+  }
+
+  const gaps: Interval[] = []
+  let cur = CAL_START
+  for (const [bs, be] of merged) {
+    if (cur < bs) gaps.push([cur, bs])
+    cur = Math.max(cur, be)
+  }
+  if (cur < CAL_END) gaps.push([cur, CAL_END])
+  return gaps
+}
+
+// Returns the free time windows in a day as [startMin, endMin] pairs.
+// Used by CalendarClient to place per-material study blocks.
+export function getFreeWindows(params: {
+  recurringEventsForDay: Array<{ start_time: string; end_time: string }>
+  oneOffEventsForDay: Array<{ start_time: string; end_time: string }>
+  nightEndMin: number
+  nightStartMin: number
+  bufferMin: number
+}): [number, number][] {
+  return buildFreeGaps(params)
+}
+
+// Distributes totalStudyMin minutes of study blocks across the free time in a day,
+// respecting buffers around events and the wake-up/sleep window.
+export function placeStudyBlocks(params: {
+  recurringEventsForDay: Array<{ start_time: string; end_time: string }>
+  oneOffEventsForDay: Array<{ start_time: string; end_time: string }>
+  nightEndMin: number
+  nightStartMin: number
+  sessionLengthMin: number
+  breakLengthMin: number
+  bufferMin: number
+  totalStudyMin: number
+}): StudyBlockPlacement[] {
+  const { sessionLengthMin, breakLengthMin, totalStudyMin } = params
+  if (totalStudyMin <= 0) return []
+
+  const gaps = buildFreeGaps(params)
+  const totalFree = gaps.reduce((s, [a, b]) => s + b - a, 0)
+  if (totalFree <= 0) return []
+
+  const result: StudyBlockPlacement[] = []
+  let remaining = Math.min(totalStudyMin, totalFree)
+
+  for (const [gapStart, gapEnd] of gaps) {
+    if (remaining <= 0) break
+    let pos = gapStart
+    while (remaining > 0 && pos < gapEnd) {
+      const blockLen = Math.min(sessionLengthMin, remaining, gapEnd - pos)
+      if (blockLen < 15) break
+      result.push({ start_time: minsToHHMM(pos), end_time: minsToHHMM(pos + blockLen) })
+      remaining -= blockLen
+      pos       += blockLen + breakLengthMin
+    }
+  }
+
+  return result
+}
+
+function minsToHHMM(m: number): string {
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }

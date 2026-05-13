@@ -14,6 +14,14 @@ export interface Database {
           name: string | null
           night_start: string // Postgres time → "HH:MM:SS"
           night_end: string
+          daily_study_minutes: number
+          session_length_minutes: number
+          break_length_minutes: number
+          buffer_minutes: number
+          max_subjects_per_day: number | null
+          plan: 'free' | 'pro'  // subscription tier; default 'free'
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           created_at: string
         }
         Insert: {
@@ -21,6 +29,14 @@ export interface Database {
           name?: string | null
           night_start?: string
           night_end?: string
+          daily_study_minutes?: number
+          session_length_minutes?: number
+          break_length_minutes?: number
+          buffer_minutes?: number
+          max_subjects_per_day?: number | null
+          plan?: 'free' | 'pro'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           created_at?: string
         }
         Update: {
@@ -28,6 +44,14 @@ export interface Database {
           name?: string | null
           night_start?: string
           night_end?: string
+          daily_study_minutes?: number
+          session_length_minutes?: number
+          break_length_minutes?: number
+          buffer_minutes?: number
+          max_subjects_per_day?: number | null
+          plan?: 'free' | 'pro'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           created_at?: string
         }
         Relationships: []
@@ -188,6 +212,91 @@ export interface Database {
         ]
       }
 
+      recurring_events: {
+        Row: {
+          id: string
+          user_id: string
+          title: string | null
+          day_of_week: number  // 0=Sunday, 1=Monday … 6=Saturday
+          start_time: string   // Postgres time → "HH:MM:SS"
+          end_time: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title?: string | null
+          day_of_week: number
+          start_time: string
+          end_time: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string | null
+          day_of_week?: number
+          start_time?: string
+          end_time?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'recurring_events_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      material_summaries: {
+        Row: {
+          id: string
+          material_id: string
+          user_id: string
+          source_text: string
+          summary: string
+          model_used: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          material_id: string
+          user_id: string
+          source_text: string
+          summary: string
+          model_used?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          material_id?: string
+          user_id?: string
+          source_text?: string
+          summary?: string
+          model_used?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'material_summaries_material_id_fkey'
+            columns: ['material_id']
+            referencedRelation: 'study_materials'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'material_summaries_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
       schedules: {
         Row: {
           id: string
@@ -227,6 +336,70 @@ export interface Database {
             foreignKeyName: 'schedules_material_id_fkey'
             columns: ['material_id']
             referencedRelation: 'study_materials'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      study_blocks: {
+        Row: {
+          id: string
+          user_id: string
+          block_date: string   // "YYYY-MM-DD"
+          start_time: string   // "HH:MM:SS"
+          end_time: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          block_date: string
+          start_time: string
+          end_time: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          block_date?: string
+          start_time?: string
+          end_time?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'study_blocks_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      blocked_days: {
+        Row: {
+          id: string
+          user_id: string
+          blocked_date: string // "YYYY-MM-DD"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          blocked_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          blocked_date?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'blocked_days_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'profiles'
             referencedColumns: ['id']
           }
         ]

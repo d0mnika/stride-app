@@ -15,8 +15,16 @@ import type {
   StudySessionInsert,
   CalendarEvent,
   CalendarEventInsert,
+  RecurringEvent,
+  RecurringEventInsert,
+  MaterialSummary,
+  MaterialSummaryInsert,
   Schedule,
   ScheduleInsert,
+  StudyBlock,
+  StudyBlockInsert,
+  BlockedDay,
+  BlockedDayInsert,
 } from '@/types'
 
 type Client = SupabaseClient<Database>
@@ -221,6 +229,110 @@ export async function deleteCalendarEvent(client: Client, id: string): Promise<v
   if (error) throw new Error(error.message)
 }
 
+// ─── Recurring Events ─────────────────────────────────────────────────────────
+
+export async function getRecurringEvents(client: Client, userId: string): Promise<RecurringEvent[]> {
+  const { data, error } = await client
+    .from('recurring_events')
+    .select('*')
+    .eq('user_id', userId)
+    .order('day_of_week', { ascending: true })
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function createRecurringEvent(
+  client: Client,
+  event: RecurringEventInsert
+): Promise<RecurringEvent> {
+  const { data, error } = await client
+    .from('recurring_events')
+    .insert(event)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function deleteRecurringEvent(client: Client, id: string): Promise<void> {
+  const { error } = await client.from('recurring_events').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+// ─── Material Summaries ───────────────────────────────────────────────────────
+
+export async function getSummaryByMaterial(
+  client: Client,
+  materialId: string
+): Promise<MaterialSummary | null> {
+  const { data, error } = await client
+    .from('material_summaries')
+    .select('*')
+    .eq('material_id', materialId)
+    .single()
+  if (error && error.code !== 'PGRST116') throw new Error(error.message)
+  return data
+}
+
+export async function upsertSummary(
+  client: Client,
+  summary: MaterialSummaryInsert
+): Promise<MaterialSummary> {
+  const { data, error } = await client
+    .from('material_summaries')
+    .upsert({ ...summary, updated_at: new Date().toISOString() }, { onConflict: 'material_id' })
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+// ─── Study Blocks ─────────────────────────────────────────────────────────────
+
+export async function getStudyBlocksForDateRange(
+  client: Client,
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<StudyBlock[]> {
+  const { data, error } = await client
+    .from('study_blocks')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('block_date', startDate)
+    .lte('block_date', endDate)
+    .order('block_date')
+    .order('start_time')
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function createStudyBlocksBatch(
+  client: Client,
+  blocks: StudyBlockInsert[]
+): Promise<StudyBlock[]> {
+  if (blocks.length === 0) return []
+  const { data, error } = await client
+    .from('study_blocks')
+    .insert(blocks)
+    .select()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function deleteStudyBlocksForDate(
+  client: Client,
+  userId: string,
+  date: string
+): Promise<void> {
+  const { error } = await client
+    .from('study_blocks')
+    .delete()
+    .eq('user_id', userId)
+    .eq('block_date', date)
+  if (error) throw new Error(error.message)
+}
+
 // ─── Schedules ────────────────────────────────────────────────────────────────
 
 export async function getSchedules(
@@ -267,5 +379,47 @@ export async function markScheduleDone(client: Client, scheduleId: string): Prom
     .from('schedules')
     .update({ is_done: true })
     .eq('id', scheduleId)
+  if (error) throw new Error(error.message)
+}
+
+// ─── Blocked Days ─────────────────────────────────────────────────────────────
+
+export async function getBlockedDays(
+  client: Client,
+  userId: string,
+  startDate: string,
+  endDate: string,
+): Promise<BlockedDay[]> {
+  const { data, error } = await client
+    .from('blocked_days')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('blocked_date', startDate)
+    .lte('blocked_date', endDate)
+    .order('blocked_date')
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function blockDay(
+  client: Client,
+  userId: string,
+  date: string,
+): Promise<void> {
+  const insert: BlockedDayInsert = { user_id: userId, blocked_date: date }
+  const { error } = await client.from('blocked_days').upsert(insert, { onConflict: 'user_id,blocked_date' })
+  if (error) throw new Error(error.message)
+}
+
+export async function unblockDay(
+  client: Client,
+  userId: string,
+  date: string,
+): Promise<void> {
+  const { error } = await client
+    .from('blocked_days')
+    .delete()
+    .eq('user_id', userId)
+    .eq('blocked_date', date)
   if (error) throw new Error(error.message)
 }

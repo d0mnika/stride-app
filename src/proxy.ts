@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createMiddlewareClient } from '@/lib/supabase/middleware'
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/signup']
+const PUBLIC_ROUTES = ['/login', '/signup', '/api/stripe/webhook', '/privacy', '/terms']
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request })

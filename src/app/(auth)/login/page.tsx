@@ -33,13 +33,13 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Stride</h1>
-        <p className="mt-2 text-sm text-gray-500">Sign in to your account</p>
+        <h1 className="text-3xl font-bold tracking-tight text-[#3D2B26]">Stride</h1>
+        <p className="mt-2 text-sm text-[#8C7B75]">Sign in to your account</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-[#5C4A45] mb-1">
             Email
           </label>
           <input
@@ -49,12 +49,12 @@ export default function LoginPage() {
             required
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+            className={inputCls}
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-[#5C4A45] mb-1">
             Password
           </label>
           <input
@@ -64,12 +64,12 @@ export default function LoginPage() {
             required
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+            className={inputCls}
           />
         </div>
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p className="text-sm text-[#C47070] bg-[#FAF0EF] border border-[#E69B97] rounded-lg px-3 py-2">
             {error}
           </p>
         )}
@@ -77,18 +77,21 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 transition"
+          className={btnPrimary + ' w-full'}
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-[#8C7B75]">
         No account?{' '}
-        <Link href="/signup" className="font-medium text-gray-900 hover:underline">
+        <Link href="/signup" className="font-medium text-[#C8A7A1] hover:text-[#B89390] transition">
           Sign up
         </Link>
       </p>
     </div>
   )
 }
+
+const inputCls = 'w-full rounded-lg border border-[#EDEAE3] bg-[#FAF9F7] px-3 py-2 text-sm text-[#3D2B26] outline-none focus:border-[#C8A7A1] focus:ring-1 focus:ring-[#C8A7A1] transition placeholder:text-[#C4B3AC]'
+const btnPrimary = 'rounded-lg bg-[#C8A7A1] px-4 py-2 text-sm font-medium text-white hover:bg-[#B89390] disabled:opacity-50 transition shadow-[0_4px_12px_rgba(200,167,161,0.3)] hover:shadow-[0_6px_16px_rgba(200,167,161,0.4)]'
