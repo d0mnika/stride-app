@@ -100,12 +100,11 @@ export default function AccountClient({ email, name, plan, memberSince, hasCusto
       {/* Subscription card */}
       {plan === 'free' ? (
         <div className="bg-[#FAF9F7] border border-[#EDEAE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(163,143,134,0.08)]">
-          <div className="flex items-start gap-3 mb-5">
-            <Crown size={18} className="text-[#C8A7A1] shrink-0 mt-0.5" />
-            <div>
-              <h2 className="font-palatino text-lg font-bold text-[#3D2B26]">Upgrade to Pro</h2>
-              <p className="text-sm text-[#8C7B75] mt-0.5">Unlock everything Stride has to offer.</p>
-            </div>
+          {/* Free trial banner */}
+          <div className="text-center mb-5">
+            <p className="font-palatino text-2xl font-bold text-[#3D2B26]">Try Pro free for 14 days</p>
+            <p className="text-sm text-[#8C7B75] mt-1">No charge today. Cancel any time before the trial ends.</p>
+            <p className="text-xs text-[#A38F86] mt-0.5">Then 39 zł / month</p>
           </div>
 
           <ul className="space-y-2 mb-6">
@@ -124,7 +123,7 @@ export default function AccountClient({ email, name, plan, memberSince, hasCusto
             disabled={loading}
             className="w-full py-3 rounded-xl bg-[#3D2B26] text-[#F5F1EB] text-sm font-semibold hover:bg-[#5C4A45] transition shadow-[0_4px_12px_rgba(61,43,38,0.2)] disabled:opacity-50"
           >
-            {loading ? 'Redirecting…' : 'Upgrade to Pro'}
+            {loading ? 'Redirecting…' : 'Start free trial'}
           </button>
         </div>
       ) : (
