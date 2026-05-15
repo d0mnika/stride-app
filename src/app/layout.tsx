@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: 'Stride',
   description: 'Adaptive study planner — build realistic plans, stay on track before exams.',
   manifest: '/manifest.json',
-  icons: { apple: '/icons/icon.svg' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
