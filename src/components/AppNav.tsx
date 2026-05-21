@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { User } from 'lucide-react'
+import { User, Settings } from 'lucide-react'
 
 const LINKS = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -45,20 +45,28 @@ export default function AppNav({ current, userInitial }: Props) {
           ))}
         </div>
 
-        {/* Account button */}
-        <Link
-          href="/account"
-          className="shrink-0 flex items-center gap-2 rounded-full border border-[#D2C4B5] bg-[#FAF9F7] px-3.5 py-1.5 text-xs font-medium text-[#5C4A45] hover:border-[#A38F86] hover:bg-[#F0ECE6] transition shadow-[0_2px_6px_rgba(163,143,134,0.12)]"
-        >
-          {userInitial ? (
-            <span className="w-5 h-5 rounded-full bg-[#C8A7A1] text-white text-[9px] font-bold flex items-center justify-center shrink-0">
-              {userInitial}
-            </span>
-          ) : (
-            <User size={12} className="shrink-0" />
-          )}
-          <span>Account</span>
-        </Link>
+        {/* Right side: Settings (mobile only) + Account */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/settings"
+            className={`sm:hidden p-2 rounded-lg border border-[#D2C4B5] bg-[#FAF9F7] hover:border-[#A38F86] hover:bg-[#F0ECE6] transition shadow-[0_2px_6px_rgba(163,143,134,0.12)] ${current === '/settings' ? 'text-[#C8A7A1]' : 'text-[#5C4A45]'}`}
+          >
+            <Settings size={15} />
+          </Link>
+          <Link
+            href="/account"
+            className="flex items-center gap-2 rounded-full border border-[#D2C4B5] bg-[#FAF9F7] px-3.5 py-1.5 text-xs font-medium text-[#5C4A45] hover:border-[#A38F86] hover:bg-[#F0ECE6] transition shadow-[0_2px_6px_rgba(163,143,134,0.12)]"
+          >
+            {userInitial ? (
+              <span className="w-5 h-5 rounded-full bg-[#C8A7A1] text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                {userInitial}
+              </span>
+            ) : (
+              <User size={12} className="shrink-0" />
+            )}
+            <span>Account</span>
+          </Link>
+        </div>
 
       </div>
     </nav>
