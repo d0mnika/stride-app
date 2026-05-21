@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { Home, BookOpen, TimerIcon, CalendarDays, User } from 'lucide-react'
+import { Home, BookOpen, TimerIcon, CalendarDays, Zap } from 'lucide-react'
 
 const TABS = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/materials', label: 'Study', icon: BookOpen },
   { href: '/timer', label: 'Timer', icon: TimerIcon },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/account', label: 'Account', icon: User },
+  { href: '/focus', label: 'Focus', icon: Zap },
 ] as const
 
 interface Props {
