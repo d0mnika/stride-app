@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import AppNav from '@/components/AppNav'
+import BottomNav from '@/components/BottomNav'
 import {
   getProfile, getRecurringEvents, getCalendarEvents,
   getStudyBlocksForDateRange, getSchedules, getSessionsByUser,
@@ -131,7 +132,7 @@ export default async function CalendarPage() {
   return (
     <main className="min-h-screen bg-[#F5F1EB]">
       <AppNav current="/calendar" userInitial={user.email?.[0].toUpperCase()} />
-      <div className="max-w-5xl mx-auto px-6 pt-10 pb-16">
+      <div className="max-w-5xl mx-auto px-6 pt-10 pb-24 sm:pb-16">
         <h1 className="font-palatino text-3xl font-bold text-[#3D2B26] mb-8">Calendar</h1>
 
         <CalendarClient
@@ -150,6 +151,7 @@ export default async function CalendarPage() {
           examSubjects={examSubjects}
         />
       </div>
+      <BottomNav current="/calendar" />
     </main>
   )
 }

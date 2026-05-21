@@ -33,7 +33,7 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-[#3D2B26]">Stride</h1>
+        <h1 className="font-palatino text-4xl font-bold text-[#3D2B26]">Stride</h1>
         <p className="mt-2 text-sm text-[#8C7B75]">Sign in to your account</p>
       </div>
 

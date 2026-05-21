@@ -28,8 +28,8 @@ export default function AppNav({ current, userInitial }: Props) {
           Stride
         </Link>
 
-        {/* Nav links */}
-        <div className="flex items-center gap-0.5 text-xs font-medium tracking-wide overflow-x-auto no-scrollbar">
+        {/* Nav links — hidden on mobile (bottom nav used instead) */}
+        <div className="hidden sm:flex items-center gap-0.5 text-xs font-medium tracking-wide overflow-x-auto no-scrollbar">
           {LINKS.map(l => (
             <Link
               key={l.href}
