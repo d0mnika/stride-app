@@ -347,7 +347,7 @@ export default function FocusClient({ materials, exams, plan }: FocusClientProps
   return (
     <div className="w-full max-w-sm flex flex-col gap-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-[#3D2B26]">Focus</h1>
+        <h1 className="font-palatino text-3xl font-bold text-[#3D2B26]">Focus</h1>
         <p className="mt-1 text-sm text-[#8C7B75]">Block distractions and study deeply</p>
       </div>
 

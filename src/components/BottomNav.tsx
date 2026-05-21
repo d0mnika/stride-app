@@ -16,7 +16,7 @@ interface Props {
 export default function BottomNav({ current }: Props) {
   return (
     <nav
-      className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#F5F1EB]/97 backdrop-blur-md border-t border-[#EDEAE3]"
+      className="sm:hidden fixed bottom-2 left-2 right-2 z-40 bg-[#F5F1EB]/97 backdrop-blur-md border border-[#EDEAE3] rounded-2xl shadow-[0_4px_20px_rgba(163,143,134,0.15)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-center justify-around h-16">
