@@ -413,7 +413,7 @@ export default function CalendarClient({
     <div className="flex flex-col gap-6">
 
       {/* ── Week nav + add buttons ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekOffset(w => w - 1)}
@@ -443,7 +443,7 @@ export default function CalendarClient({
         <div className="flex gap-2">
           <button
             onClick={() => setPanel(p => p === 'recurring' ? 'none' : 'recurring')}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
               panel === 'recurring'
                 ? 'border-[#C8A7A1] bg-[#C8A7A1] text-white shadow-[0_4px_12px_rgba(200,167,161,0.3)]'
                 : 'border-[#EDEAE3] text-[#5C4A45] hover:border-[#A38F86]'
@@ -454,7 +454,7 @@ export default function CalendarClient({
           </button>
           <button
             onClick={() => setPanel(p => p === 'oneoff' ? 'none' : 'oneoff')}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
               panel === 'oneoff'
                 ? 'border-[#C8A7A1] bg-[#C8A7A1] text-white shadow-[0_4px_12px_rgba(200,167,161,0.3)]'
                 : 'border-[#EDEAE3] text-[#5C4A45] hover:border-[#A38F86]'
