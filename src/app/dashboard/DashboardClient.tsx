@@ -35,6 +35,7 @@ export default function DashboardClient({
   const [progressInputs, setProgressInputs] = useState<Record<string, string>>({})
   const [showLowEnergyConfirm, setShowLowEnergyConfirm] = useState(false)
   const [celebratingExam, setCelebratingExam] = useState<Exam | null>(null)
+  const [showCompleted, setShowCompleted] = useState(false)
 
   const materialById = new Map(materials.map(m => [m.id, m]))
   const examById     = new Map(exams.map(e => [e.id, e]))
@@ -350,48 +351,81 @@ export default function DashboardClient({
       <div>
         <h2 className="font-palatino text-3xl font-bold text-[#3D2B26] text-center mb-5">Progress</h2>
         <div className="flex flex-col gap-5">
-          {exams.map(exam => {
-            const examMaterials = materials.filter(m => m.exam_id === exam.id)
-            if (examMaterials.length === 0) return null
+          {(() => {
+            const activeExams: React.ReactNode[] = []
+            const completedExams: React.ReactNode[] = []
 
-            const daysUntil = Math.ceil(
-              (new Date(exam.exam_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-            )
+            exams.forEach(exam => {
+              const examMaterials = materials.filter(m => m.exam_id === exam.id)
+              if (examMaterials.length === 0) return
+
+              const daysUntil = Math.ceil(
+                (new Date(exam.exam_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+              )
+
+              const isCompleted = examMaterials.every(m => calculateRemaining(m, sessions) <= 0)
+
+              const card = (
+                <div key={exam.id} className={`rounded-xl border px-5 py-4 shadow-[0_2px_8px_rgba(163,143,134,0.1)] ${isCompleted ? 'border-[#B5C4AA] bg-[#F0EDE8]' : 'border-[#EDEAE3] bg-[#FAF9F7]'}`}>
+                  <div className="flex items-baseline justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {isCompleted && <CheckCircle size={13} className="text-[#7BA87B] shrink-0" />}
+                      <p className={`text-sm font-semibold ${isCompleted ? 'text-[#4D6A49]' : 'text-[#3D2B26]'}`}>{exam.subject}</p>
+                    </div>
+                    <p className="text-xs text-[#A38F86]">
+                      {isCompleted ? 'Done' : daysUntil > 0 ? `${daysUntil}d left` : daysUntil === 0 ? 'Today!' : 'Past'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2.5">
+                    {examMaterials.map(m => {
+                      const remaining = calculateRemaining(m, sessions)
+                      const completed = m.total_units - remaining
+                      const pct       = m.total_units > 0 ? (completed / m.total_units) * 100 : 0
+                      return (
+                        <div key={m.id}>
+                          <div className="flex items-baseline justify-between mb-1">
+                            <p className="text-xs text-[#6E5850] truncate max-w-[60%]">{m.title}</p>
+                            <p className="text-xs text-[#A38F86]">{completed}/{m.total_units} {m.unit_label}s</p>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-[#EDEAE3] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-[#7BA87B]' : 'bg-[#C8A7A1]'}`}
+                              style={{ width: `${Math.min(100, pct)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+
+              if (isCompleted) completedExams.push(card)
+              else activeExams.push(card)
+            })
 
             return (
-              <div key={exam.id} className="rounded-xl border border-[#EDEAE3] bg-[#FAF9F7] px-5 py-4 shadow-[0_2px_8px_rgba(163,143,134,0.1)]">
-                <div className="flex items-baseline justify-between mb-3">
-                  <p className="text-sm font-semibold text-[#3D2B26]">{exam.subject}</p>
-                  <p className="text-xs text-[#A38F86]">
-                    {daysUntil > 0 ? `${daysUntil}d left` : daysUntil === 0 ? 'Today!' : 'Past'}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  {examMaterials.map(m => {
-                    const remaining  = calculateRemaining(m, sessions)
-                    const completed  = m.total_units - remaining
-                    const pct        = m.total_units > 0 ? (completed / m.total_units) * 100 : 0
-                    return (
-                      <div key={m.id}>
-                        <div className="flex items-baseline justify-between mb-1">
-                          <p className="text-xs text-[#6E5850] truncate max-w-[60%]">{m.title}</p>
-                          <p className="text-xs text-[#A38F86]">
-                            {completed}/{m.total_units} {m.unit_label}s
-                          </p>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-[#EDEAE3] overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-[#C8A7A1] transition-all duration-500"
-                            style={{ width: `${Math.min(100, pct)}%` }}
-                          />
-                        </div>
+              <>
+                {activeExams}
+                {completedExams.length > 0 && (
+                  <div>
+                    <button
+                      onClick={() => setShowCompleted(v => !v)}
+                      className="w-full flex items-center justify-center gap-2 text-xs text-[#A38F86] hover:text-[#5C4A45] transition py-2"
+                    >
+                      <CheckCircle size={13} className="text-[#7BA87B]" />
+                      {showCompleted ? 'Hide' : 'Show'} completed ({completedExams.length})
+                    </button>
+                    {showCompleted && (
+                      <div className="flex flex-col gap-5 mt-3">
+                        {completedExams}
                       </div>
-                    )
-                  })}
-                </div>
-              </div>
+                    )}
+                  </div>
+                )}
+              </>
             )
-          })}
+          })()}
         </div>
       </div>
 
