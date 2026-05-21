@@ -1,7 +1,8 @@
 'use client'
 
-import { useTransition, useState } from 'react'
-import { AlertTriangle, CheckCircle, BookOpen, Flame, Lock, BatteryLow } from 'lucide-react'
+import { useTransition, useState, useEffect } from 'react'
+import { AlertTriangle, CheckCircle, BookOpen, Flame, Lock, BatteryLow, PartyPopper } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { updateProgressAction, regenerateScheduleAction, lowEnergyDayAction } from './actions'
 import { calculateRemaining } from '@/lib/scheduler'
 import type { Schedule, Exam, StudyMaterial, StudySession } from '@/types'
@@ -33,10 +34,47 @@ export default function DashboardClient({
   const [isPending, startTransition] = useTransition()
   const [progressInputs, setProgressInputs] = useState<Record<string, string>>({})
   const [showLowEnergyConfirm, setShowLowEnergyConfirm] = useState(false)
+  const [celebratingExam, setCelebratingExam] = useState<Exam | null>(null)
 
   const materialById = new Map(materials.map(m => [m.id, m]))
   const examById     = new Map(exams.map(e => [e.id, e]))
   const isPro        = plan === 'pro'
+
+  // Check for newly completed exams and trigger celebration
+  useEffect(() => {
+    const celebrated: string[] = JSON.parse(localStorage.getItem('celebratedExams') ?? '[]')
+
+    for (const exam of exams) {
+      if (celebrated.includes(exam.id)) continue
+      const examMaterials = materials.filter(m => m.exam_id === exam.id)
+      if (examMaterials.length === 0) continue
+      const allDone = examMaterials.every(m => calculateRemaining(m, sessions) <= 0)
+      if (allDone) {
+        setCelebratingExam(exam)
+        localStorage.setItem('celebratedExams', JSON.stringify([...celebrated, exam.id]))
+        break
+      }
+    }
+  }, [exams, materials, sessions])
+
+  // Fire confetti when overlay appears
+  useEffect(() => {
+    if (!celebratingExam) return
+    const fire = (origin: { x: number; y: number }) =>
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin,
+        colors: ['#C8A7A1', '#7BA87B', '#3D2B26', '#E8C9C5', '#F5F1EB', '#A8C4A8'],
+      })
+    setTimeout(() => {
+      fire({ x: 0.2, y: 0.6 })
+      fire({ x: 0.8, y: 0.6 })
+    }, 200)
+    setTimeout(() => {
+      fire({ x: 0.5, y: 0.5 })
+    }, 600)
+  }, [celebratingExam])
 
   function handleUpdateProgress(scheduleId: string, unitsTarget: number) {
     const raw   = progressInputs[scheduleId] ?? String(unitsTarget)
@@ -68,6 +106,37 @@ export default function DashboardClient({
 
   return (
     <div className="flex flex-col gap-8">
+
+      {/* Celebration overlay */}
+      {celebratingExam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F5F1EB]/95 backdrop-blur-sm px-6">
+          <div className="text-center max-w-sm">
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 rounded-full bg-[#F0ECE6] border border-[#D2C4B5] flex items-center justify-center shadow-[0_4px_20px_rgba(163,143,134,0.2)]">
+                <PartyPopper size={36} className="text-[#C8A7A1]" />
+              </div>
+            </div>
+            <h2 className="font-palatino text-4xl font-bold text-[#3D2B26] mb-3">
+              You did it!
+            </h2>
+            <p className="text-lg text-[#5C4A45] mb-2">
+              All materials for
+            </p>
+            <p className="font-palatino text-2xl font-bold text-[#C8A7A1] mb-6">
+              {celebratingExam.subject}
+            </p>
+            <p className="text-sm text-[#8C7B75] mb-10 leading-relaxed">
+              You finished everything on time. Take a moment to be proud — then go ace that exam.
+            </p>
+            <button
+              onClick={() => setCelebratingExam(null)}
+              className="w-full py-3.5 rounded-xl bg-[#3D2B26] text-[#F5F1EB] text-sm font-semibold hover:bg-[#5C4A45] transition shadow-[0_4px_12px_rgba(61,43,38,0.2)]"
+            >
+              Let&apos;s go!
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Streak */}
       {streak > 0 && (
@@ -108,7 +177,6 @@ export default function DashboardClient({
             ? '∞'
             : w.pace_needed_units_per_min.toFixed(1)
 
-          // How many extra minutes/day the user needs to finish on time
           const extraMinPerDay = w.pace_needed_units_per_min !== null && w.pace_units_per_min > 0
             ? Math.ceil((w.pace_needed_units_per_min / w.pace_units_per_min - 1) * dailyStudyMinutes)
             : null

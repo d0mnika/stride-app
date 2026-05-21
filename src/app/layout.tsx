@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   icons: { apple: '/icons/apple-touch-icon.png' },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Stride',
   },
   formatDetection: { telephone: false },
