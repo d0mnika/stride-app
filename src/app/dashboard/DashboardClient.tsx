@@ -202,7 +202,7 @@ export default function DashboardClient({
                     <p className="text-xs text-[#9A5555]">
                       <span className="font-medium">Study at least {suggestedTotal} min/day</span>
                       {' '}(+{extraMinPerDay} min more than your current goal) —{' '}
-                      <a href="/settings" className="underline hover:text-[#7A3535]">
+                      <a href="/account" className="underline hover:text-[#7A3535]">
                         update in Settings
                       </a>
                     </p>
@@ -225,7 +225,7 @@ export default function DashboardClient({
             <p className="text-sm font-medium text-[#A38F86]">Crunch Mode Warning</p>
             <p className="text-xs text-[#C4B3AC]">Know when you&apos;re falling behind — Pro feature</p>
           </div>
-          <a href="/settings" className="shrink-0 text-xs font-medium text-[#8C7B75] hover:text-[#3D2B26] transition">
+          <a href="/account" className="shrink-0 text-xs font-medium text-[#8C7B75] hover:text-[#3D2B26] transition">
             Upgrade →
           </a>
         </div>

@@ -1,14 +1,14 @@
 'use client'
 
 import React, { useState, useTransition } from 'react'
-import { Trash2, PlusCircle, ChevronDown, ChevronUp, Lock, X, Sparkles, RotateCcw, Pencil } from 'lucide-react'
+import { Trash2, PlusCircle, ChevronDown, ChevronUp, Lock, X, Sparkles, RotateCcw, Pencil, CheckCircle } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import {
   createExam, updateExam, deleteExam,
   createMaterial, updateMaterial, deleteMaterial,
   getSummaryByMaterial, createSession,
 } from '@/lib/supabase/helpers'
-import { calculatePace } from '@/lib/scheduler'
+import { calculatePace, calculateRemaining } from '@/lib/scheduler'
 import { regenAfterMaterialChange } from './actions'
 import type { Exam, ExamInsert, StudyMaterial, StudyMaterialInsert, StudySession, MaterialSummary } from '@/types'
 
@@ -36,6 +36,7 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
   const [materials, setMaterials] = useState<StudyMaterial[]>(initialMaterials)
   const [sessions] = useState<StudySession[]>(initialSessions)
   const [showExamForm, setShowExamForm] = useState(false)
+  const [showCompletedExams, setShowCompletedExams] = useState(false)
   const [summaryModal, setSummaryModal] = useState<{ material: StudyMaterial } | null>(null)
   const [, startRegen] = useTransition()
 
@@ -46,7 +47,15 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
   const [examSaving, setExamSaving] = useState(false)
 
   const isPro = plan === 'pro'
-  const atExamLimit = !isPro && exams.length >= 1
+
+  function isExamCompleted(exam: Exam) {
+    const examMaterials = materials.filter(m => m.exam_id === exam.id)
+    return examMaterials.length > 0 && examMaterials.every(m => calculateRemaining(m, sessions) <= 0)
+  }
+
+  const activeExams = exams.filter(e => !isExamCompleted(e))
+  const completedExams = exams.filter(e => isExamCompleted(e))
+  const atExamLimit = !isPro && activeExams.length >= 1
 
   async function handleAddExam(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -109,7 +118,7 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
         <p className="text-sm text-[#A38F86] text-center py-8">No exams yet. Add your first one below.</p>
       )}
 
-      {exams.map(exam => (
+      {activeExams.map(exam => (
         <ExamCard
           key={exam.id}
           exam={exam}
@@ -124,6 +133,33 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
           onSummaryClick={m => setSummaryModal({ material: m })}
         />
       ))}
+
+      {completedExams.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowCompletedExams(v => !v)}
+            className="w-full flex items-center justify-center gap-2 text-xs text-[#A38F86] hover:text-[#5C4A45] transition py-2"
+          >
+            <CheckCircle size={13} className="text-[#7BA87B]" />
+            {showCompletedExams ? 'Hide' : 'Show'} completed ({completedExams.length})
+          </button>
+          {showCompletedExams && completedExams.map(exam => (
+            <ExamCard
+              key={exam.id}
+              exam={exam}
+              plan={plan}
+              materials={materials.filter(m => m.exam_id === exam.id)}
+              sessions={sessions}
+              onDeleteExam={handleDeleteExam}
+              onExamUpdated={handleExamUpdated}
+              onMaterialAdded={handleMaterialAdded}
+              onMaterialUpdated={handleMaterialUpdated}
+              onMaterialDeleted={handleMaterialDeleted}
+              onSummaryClick={m => setSummaryModal({ material: m })}
+            />
+          ))}
+        </div>
+      )}
 
       {summaryModal && (
         <SummaryModal
@@ -214,7 +250,7 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
         <div className="flex items-center gap-3 rounded-xl border border-dashed border-[#D2C4B5] px-4 py-3 text-sm text-[#A38F86]">
           <Lock size={15} className="shrink-0" />
           <span className="flex-1">1 exam limit on Free plan</span>
-          <a href="/settings" className="shrink-0 text-xs font-medium text-[#C8A7A1] hover:text-[#B89390] transition">
+          <a href="/account" className="shrink-0 text-xs font-medium text-[#C8A7A1] hover:text-[#B89390] transition">
             Upgrade to Pro →
           </a>
         </div>
