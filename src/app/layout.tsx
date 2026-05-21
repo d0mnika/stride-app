@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     title: 'Stride',
   },
   formatDetection: { telephone: false },
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
