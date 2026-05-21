@@ -218,6 +218,12 @@ export default function CalendarClient({
   const [isPending, startTransition] = useTransition()
   const [localBlocked, setLocalBlocked] = useState<Set<string>>(() => new Set(blockedDates))
   const [confirmBlockDate, setConfirmBlockDate] = useState<string | null>(null)
+  const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
+    const mon = weekStart(today)
+    const strs = Array.from({ length: 7 }, (_, i) => toDateStr(addDaysToDate(mon, i)))
+    const idx = strs.indexOf(today)
+    return idx >= 0 ? idx : 0
+  })
 
   const [blocksByDate, setBlocksByDate] = useState<Record<string, MaterialBlockItem[]>>(() => {
     const map: Record<string, MaterialBlockItem[]> = {}
@@ -559,8 +565,169 @@ export default function CalendarClient({
         </form>
       )}
 
-      {/* ── Weekly grid ── */}
-      <div className="rounded-xl border border-[#EDEAE3] bg-[#FAF9F7] overflow-hidden shadow-[0_2px_8px_rgba(163,143,134,0.1)]">
+      {/* ── Mobile: day tabs + single column ── */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {/* Day selector pills */}
+        <div className="flex gap-1">
+          {weekDates.map((date, i) => {
+            const dateStr   = weekDateStrs[i]
+            const isToday   = dateStr === today
+            const isSelected = i === selectedDayIdx
+            const isBlocked = localBlocked.has(dateStr)
+            return (
+              <button
+                key={i}
+                onClick={() => setSelectedDayIdx(i)}
+                className={`flex flex-col items-center gap-0.5 flex-1 py-2 rounded-xl transition-colors ${
+                  isSelected
+                    ? 'bg-[#3D2B26] text-[#F5F1EB]'
+                    : isBlocked
+                    ? 'bg-red-50 text-red-400'
+                    : isToday
+                    ? 'bg-[#EDEAE3] text-[#3D2B26]'
+                    : 'text-[#8C7B75]'
+                }`}
+              >
+                <span className="text-[9px] font-semibold uppercase tracking-wider">{DAY_LABELS[i]}</span>
+                <span className="text-sm font-bold">{date.getDate()}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {(() => {
+          const colIdx    = selectedDayIdx
+          const date      = weekDates[colIdx]
+          const dateStr   = weekDateStrs[colIdx]
+          const jsDay     = date.getDay()
+          const isToday   = dateStr === today
+          const isBlocked = localBlocked.has(dateStr)
+
+          const recEvents = recurringEvents.filter(e => e.day_of_week === jsDay)
+          const oneOffs   = calendarEvents.filter(e => isoToLocalDate(e.start_time) === dateStr)
+
+          const savedForDay      = blocksByDate[dateStr]
+          const hasMaterialSaved = savedForDay?.some(b => b.materialId !== null) ?? false
+          const hasSaved         = hasMaterialSaved
+          const freeWins = getFreeWindows({
+            recurringEventsForDay: recEvents.map(e => ({ start_time: e.start_time, end_time: e.end_time })),
+            oneOffEventsForDay: oneOffs.map(e => ({ start_time: isoToLocalTime(e.start_time), end_time: isoToLocalTime(e.end_time) })),
+            nightEndMin, nightStartMin, bufferMin,
+          })
+          const displayBlocks: MaterialBlockItem[] = isBlocked
+            ? []
+            : (hasMaterialSaved ? savedForDay! : null)
+              ?? computeAutoMaterialBlocks(scheduledMaterialsByDate[dateStr] ?? [], freeWins, breakLengthMin)
+
+          return (
+            <div className="rounded-xl border border-[#EDEAE3] bg-[#FAF9F7] overflow-hidden shadow-[0_2px_8px_rgba(163,143,134,0.1)]">
+              {/* Day header */}
+              <div className={`flex items-center justify-between px-4 py-2.5 border-b border-[#EDEAE3] ${isBlocked ? 'bg-red-50' : ''}`}>
+                <p className="text-sm font-semibold text-[#3D2B26]">
+                  {DAY_FULL[colIdx]}, {formatDateHeader(date)}
+                </p>
+                <div className="flex items-center gap-2">
+                  {hasSaved && (
+                    <button
+                      onClick={() => handleResetDay(dateStr)}
+                      title="Reset study blocks to auto"
+                      className="p-1 rounded text-[#C4B3AC] hover:text-[#5C4A45] transition"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => isBlocked ? handleToggleBlock(dateStr) : setConfirmBlockDate(dateStr)}
+                    title={isBlocked ? 'Unblock day' : 'Block this day'}
+                    className={`p-1 rounded transition ${isBlocked ? 'text-red-400' : 'text-[#D2C4B5] hover:text-[#8C7B75]'}`}
+                  >
+                    <Ban size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="relative flex" style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
+                <div className="w-12 shrink-0 relative">
+                  {hours.slice(0, -1).map(h => (
+                    <div
+                      key={h}
+                      className="absolute right-2 text-[10px] text-[#C4B3AC] leading-none"
+                      style={{ top: (h - START_HOUR) * HOUR_HEIGHT - 6 }}
+                    >
+                      {String(h).padStart(2, '0')}:00
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`flex-1 relative border-l border-[#EDEAE3] ${isToday ? 'bg-blue-50/30' : ''}`}>
+                  {hours.map(h => (
+                    <div key={h} className="absolute w-full border-t border-[#EDEAE3]" style={{ top: (h - START_HOUR) * HOUR_HEIGHT }} />
+                  ))}
+
+                  {isBlocked && (
+                    <div className="absolute inset-0 z-10 bg-red-50/70 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                      <Ban size={20} className="text-red-300" />
+                      <span className="text-xs font-medium text-red-300 uppercase tracking-wide">Blocked</span>
+                    </div>
+                  )}
+
+                  {recEvents.map(ev => {
+                    const top    = timeToY(ev.start_time)
+                    const height = durationPx(ev.start_time, ev.end_time)
+                    if (top < 0 || top > TOTAL_HOURS * HOUR_HEIGHT) return null
+                    return (
+                      <div key={ev.id} className="absolute left-1 right-1 rounded-lg bg-blue-100 border border-blue-200 px-2 py-1 overflow-hidden" style={{ top, height }}>
+                        <div className="flex items-start justify-between gap-1">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-blue-800 truncate leading-tight">{ev.title || DAY_FULL[DAY_JS.indexOf(ev.day_of_week)]}</p>
+                            <p className="text-[10px] text-blue-600 leading-tight">{fmtTime(ev.start_time)}–{fmtTime(ev.end_time)}</p>
+                          </div>
+                          <button onClick={() => handleDeleteRecurring(ev.id)} disabled={isPending} className="shrink-0 text-blue-400 hover:text-blue-700"><X size={12} /></button>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {oneOffs.map(ev => {
+                    const startLocal = isoToLocalTime(ev.start_time)
+                    const endLocal   = isoToLocalTime(ev.end_time)
+                    const top    = timeToY(startLocal)
+                    const height = durationPx(startLocal, endLocal)
+                    if (top < 0 || top > TOTAL_HOURS * HOUR_HEIGHT) return null
+                    return (
+                      <div key={ev.id} className="absolute left-1 right-1 rounded-lg bg-amber-100 border border-amber-200 px-2 py-1 overflow-hidden" style={{ top, height }}>
+                        <div className="flex items-start justify-between gap-1">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-amber-800 truncate leading-tight">{ev.title || 'Event'}</p>
+                            <p className="text-[10px] text-amber-600 leading-tight">{startLocal}–{endLocal}</p>
+                          </div>
+                          <button onClick={() => handleDeleteOneOff(ev.id)} disabled={isPending} className="shrink-0 text-amber-400 hover:text-amber-700"><X size={12} /></button>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {displayBlocks.map((block, idx) => {
+                    const top    = (block.startMin - START_HOUR * 60) / 60 * HOUR_HEIGHT
+                    const height = Math.max(28, (block.endMin - block.startMin) / 60 * HOUR_HEIGHT)
+                    const color  = getExamColor(block.examId, examIds)
+                    return (
+                      <div key={idx} className={`absolute left-1 right-1 rounded-lg border px-2 py-1 overflow-hidden ${color.bg} ${color.border}`} style={{ top, height }}>
+                        <p className={`text-xs font-semibold ${color.text} leading-tight truncate`}>{block.materialTitle ?? 'Study'}</p>
+                        <p className={`text-[10px] ${color.sub} leading-tight`}>{minsToHM(block.startMin)}–{minsToHM(block.endMin)}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+      </div>
+
+      {/* ── Desktop: 7-column weekly grid ── */}
+      <div className="hidden sm:block rounded-xl border border-[#EDEAE3] bg-[#FAF9F7] overflow-hidden shadow-[0_2px_8px_rgba(163,143,134,0.1)]">
         {/* Day headers */}
         <div className="grid border-b border-[#EDEAE3]" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
           <div />
@@ -621,8 +788,6 @@ export default function CalendarClient({
             const recEvents = recurringEvents.filter(e => e.day_of_week === jsDay)
             const oneOffs   = calendarEvents.filter(e => isoToLocalDate(e.start_time) === dateStr)
 
-            // Use saved blocks only if they contain material info (i.e. placed by new system).
-            // Old generic saved blocks are ignored so per-material auto-blocks show instead.
             const savedForDay = blocksByDate[dateStr]
             const hasMaterialSaved = savedForDay?.some(b => b.materialId !== null) ?? false
             const hasSaved = hasMaterialSaved
@@ -646,16 +811,10 @@ export default function CalendarClient({
                 key={colIdx}
                 className={`flex-1 relative border-l border-[#EDEAE3] ${isToday ? 'bg-blue-50/30' : ''}`}
               >
-                {/* Hour grid lines */}
                 {hours.map(h => (
-                  <div
-                    key={h}
-                    className="absolute w-full border-t border-[#EDEAE3]"
-                    style={{ top: (h - START_HOUR) * HOUR_HEIGHT }}
-                  />
+                  <div key={h} className="absolute w-full border-t border-[#EDEAE3]" style={{ top: (h - START_HOUR) * HOUR_HEIGHT }} />
                 ))}
 
-                {/* Blocked day overlay */}
                 {isBlocked && (
                   <div className="absolute inset-0 z-10 bg-red-50/70 flex flex-col items-center justify-center gap-1 pointer-events-none">
                     <Ban size={14} className="text-red-300" />
@@ -663,36 +822,19 @@ export default function CalendarClient({
                   </div>
                 )}
 
-                {/* Recurring events — blue */}
                 {recEvents.map(ev => {
                   const top    = timeToY(ev.start_time)
                   const height = durationPx(ev.start_time, ev.end_time)
                   if (top < 0 || top > TOTAL_HOURS * HOUR_HEIGHT) return null
                   return (
-                    <div
-                      key={ev.id}
-                      className="absolute left-0.5 right-0.5 rounded bg-blue-100 border border-blue-200 px-1 py-0.5 overflow-hidden group"
-                      style={{ top, height }}
-                    >
-                      <p className="text-[10px] font-medium text-blue-800 truncate leading-tight">
-                        {ev.title || DAY_FULL[DAY_JS.indexOf(ev.day_of_week)]}
-                      </p>
-                      <p className="text-[9px] text-blue-600 leading-tight">
-                        {fmtTime(ev.start_time)}–{fmtTime(ev.end_time)}
-                      </p>
-                      <button
-                        onClick={() => handleDeleteRecurring(ev.id)}
-                        disabled={isPending}
-                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition text-blue-400 hover:text-blue-700"
-                        title="Remove recurring event"
-                      >
-                        <X size={10} />
-                      </button>
+                    <div key={ev.id} className="absolute left-0.5 right-0.5 rounded bg-blue-100 border border-blue-200 px-1 py-0.5 overflow-hidden group" style={{ top, height }}>
+                      <p className="text-[10px] font-medium text-blue-800 truncate leading-tight">{ev.title || DAY_FULL[DAY_JS.indexOf(ev.day_of_week)]}</p>
+                      <p className="text-[9px] text-blue-600 leading-tight">{fmtTime(ev.start_time)}–{fmtTime(ev.end_time)}</p>
+                      <button onClick={() => handleDeleteRecurring(ev.id)} disabled={isPending} className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition text-blue-400 hover:text-blue-700" title="Remove recurring event"><X size={10} /></button>
                     </div>
                   )
                 })}
 
-                {/* One-off events — amber */}
                 {oneOffs.map(ev => {
                   const startLocal = isoToLocalTime(ev.start_time)
                   const endLocal   = isoToLocalTime(ev.end_time)
@@ -700,30 +842,14 @@ export default function CalendarClient({
                   const height = durationPx(startLocal, endLocal)
                   if (top < 0 || top > TOTAL_HOURS * HOUR_HEIGHT) return null
                   return (
-                    <div
-                      key={ev.id}
-                      className="absolute left-0.5 right-0.5 rounded bg-amber-100 border border-amber-200 px-1 py-0.5 overflow-hidden group"
-                      style={{ top, height }}
-                    >
-                      <p className="text-[10px] font-medium text-amber-800 truncate leading-tight">
-                        {ev.title || 'Event'}
-                      </p>
-                      <p className="text-[9px] text-amber-600 leading-tight">
-                        {startLocal}–{endLocal}
-                      </p>
-                      <button
-                        onClick={() => handleDeleteOneOff(ev.id)}
-                        disabled={isPending}
-                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition text-amber-400 hover:text-amber-700"
-                        title="Remove event"
-                      >
-                        <X size={10} />
-                      </button>
+                    <div key={ev.id} className="absolute left-0.5 right-0.5 rounded bg-amber-100 border border-amber-200 px-1 py-0.5 overflow-hidden group" style={{ top, height }}>
+                      <p className="text-[10px] font-medium text-amber-800 truncate leading-tight">{ev.title || 'Event'}</p>
+                      <p className="text-[9px] text-amber-600 leading-tight">{startLocal}–{endLocal}</p>
+                      <button onClick={() => handleDeleteOneOff(ev.id)} disabled={isPending} className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition text-amber-400 hover:text-amber-700" title="Remove event"><X size={10} /></button>
                     </div>
                   )
                 })}
 
-                {/* Study blocks — colored by exam, draggable */}
                 {displayBlocks.map((block, idx) => {
                   const isActive = dragPos?.date === dateStr && dragPos.idx === idx
                   const startMin = isActive ? dragPos!.startMin : block.startMin
@@ -731,7 +857,6 @@ export default function CalendarClient({
                   const top    = (startMin - START_HOUR * 60) / 60 * HOUR_HEIGHT
                   const height = Math.max(24, duration / 60 * HOUR_HEIGHT)
                   const color  = getExamColor(block.examId, examIds)
-
                   return (
                     <div
                       key={idx}
@@ -739,23 +864,14 @@ export default function CalendarClient({
                       className={`absolute left-0.5 right-0.5 rounded border px-1 py-0.5 overflow-hidden select-none ${color.bg} ${color.border} ${isActive ? 'cursor-grabbing opacity-80 z-20 shadow-md' : `cursor-grab ${color.hover}`} transition-colors`}
                       style={{ top, height }}
                     >
-                      <p className={`text-[10px] font-semibold ${color.text} leading-tight truncate`}>
-                        {block.materialTitle ?? 'Study'}
-                      </p>
-                      <p className={`text-[9px] ${color.sub} leading-tight`}>
-                        {minsToHM(startMin)}–{minsToHM(block.endMin)}
-                      </p>
+                      <p className={`text-[10px] font-semibold ${color.text} leading-tight truncate`}>{block.materialTitle ?? 'Study'}</p>
+                      <p className={`text-[9px] ${color.sub} leading-tight`}>{minsToHM(startMin)}–{minsToHM(block.endMin)}</p>
                     </div>
                   )
                 })}
 
-                {/* Reset-to-auto button */}
                 {hasSaved && (
-                  <button
-                    onClick={() => handleResetDay(dateStr)}
-                    title="Reset study blocks to auto"
-                    className="absolute bottom-1 right-1 z-10 rounded p-0.5 text-[#C4B3AC] hover:text-[#5C4A45] hover:bg-[#EDEAE3] transition"
-                  >
+                  <button onClick={() => handleResetDay(dateStr)} title="Reset study blocks to auto" className="absolute bottom-1 right-1 z-10 rounded p-0.5 text-[#C4B3AC] hover:text-[#5C4A45] hover:bg-[#EDEAE3] transition">
                     <RotateCcw size={9} />
                   </button>
                 )}
