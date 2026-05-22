@@ -74,12 +74,15 @@ function computeAutoMaterialBlocks(
 ): MaterialBlockItem[] {
   if (materials.length === 0 || freeWindows.length === 0) return []
 
+  const MIN_BLOCK = 15
+
   const result: MaterialBlockItem[] = []
   let gapIdx = 0
   let pos = freeWindows[0][0]
 
   for (const mat of materials) {
-    let remaining = Math.max(5, Math.round(mat.durationMin))
+    let remaining = Math.round(mat.durationMin)
+    if (remaining <= 0) continue
 
     while (remaining > 0 && gapIdx < freeWindows.length) {
       const [gapStart, gapEnd] = freeWindows[gapIdx]
@@ -91,13 +94,15 @@ function computeAutoMaterialBlocks(
       }
 
       const avail = gapEnd - pos
-      if (avail < 5) {
+      if (avail < MIN_BLOCK) {
         gapIdx++
         if (gapIdx < freeWindows.length) pos = freeWindows[gapIdx][0]
         continue
       }
 
       const blockLen = Math.min(remaining, avail)
+      if (blockLen < MIN_BLOCK) break
+
       result.push({
         id: null,
         startMin: pos,
@@ -710,7 +715,7 @@ export default function CalendarClient({
 
                   {displayBlocks.map((block, idx) => {
                     const top    = (block.startMin - START_HOUR * 60) / 60 * HOUR_HEIGHT
-                    const height = Math.max(28, (block.endMin - block.startMin) / 60 * HOUR_HEIGHT)
+                    const height = Math.max(14, (block.endMin - block.startMin) / 60 * HOUR_HEIGHT)
                     const color  = getExamColor(block.examId, examIds)
                     return (
                       <div key={idx} className={`absolute left-1 right-1 rounded-lg border px-2 py-1 overflow-hidden ${color.bg} ${color.border}`} style={{ top, height }}>
@@ -855,7 +860,7 @@ export default function CalendarClient({
                   const startMin = isActive ? dragPos!.startMin : block.startMin
                   const duration = block.endMin - block.startMin
                   const top    = (startMin - START_HOUR * 60) / 60 * HOUR_HEIGHT
-                  const height = Math.max(24, duration / 60 * HOUR_HEIGHT)
+                  const height = Math.max(14, duration / 60 * HOUR_HEIGHT)
                   const color  = getExamColor(block.examId, examIds)
                   return (
                     <div
