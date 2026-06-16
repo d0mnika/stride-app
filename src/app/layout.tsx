@@ -18,6 +18,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#F5F1EB',
+  viewportFit: 'cover',
 }
 
 export const metadata: Metadata = {
@@ -27,13 +29,10 @@ export const metadata: Metadata = {
   icons: { apple: '/icons/apple-touch-icon.png' },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Stride',
   },
   formatDetection: { telephone: false },
-  other: {
-    'apple-mobile-web-app-capable': 'yes',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

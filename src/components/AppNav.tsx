@@ -17,7 +17,10 @@ interface Props {
 
 export default function AppNav({ current, userInitial }: Props) {
   return (
-    <nav className="sticky top-0 z-30 w-full bg-[#F5F1EB]/95 backdrop-blur-sm border-b border-[#EDEAE3] shadow-[0_1px_6px_rgba(163,143,134,0.1)]">
+    <nav
+      className="sticky top-0 z-30 w-full bg-[#F5F1EB]/95 backdrop-blur-sm border-b border-[#EDEAE3] shadow-[0_1px_6px_rgba(163,143,134,0.1)]"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-6">
 
         {/* Logo */}

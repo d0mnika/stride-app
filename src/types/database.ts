@@ -65,6 +65,7 @@ export interface Database {
           exam_date: string // Postgres date → "YYYY-MM-DD"
           priority: number
           revision_days: number
+          keep_active: boolean
           created_at: string
         }
         Insert: {
@@ -74,6 +75,7 @@ export interface Database {
           exam_date: string
           priority?: number
           revision_days?: number
+          keep_active?: boolean
           created_at?: string
         }
         Update: {
@@ -83,6 +85,7 @@ export interface Database {
           exam_date?: string
           priority?: number
           revision_days?: number
+          keep_active?: boolean
           created_at?: string
         }
         Relationships: [

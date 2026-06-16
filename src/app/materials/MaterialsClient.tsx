@@ -36,7 +36,7 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
   const [materials, setMaterials] = useState<StudyMaterial[]>(initialMaterials)
   const [sessions] = useState<StudySession[]>(initialSessions)
   const [showExamForm, setShowExamForm] = useState(false)
-  const [showCompletedExams, setShowCompletedExams] = useState(false)
+  const [showArchivedExams, setShowArchivedExams] = useState(false)
   const [summaryModal, setSummaryModal] = useState<{ material: StudyMaterial } | null>(null)
   const [, startRegen] = useTransition()
 
@@ -53,8 +53,16 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
     return examMaterials.length > 0 && examMaterials.every(m => calculateRemaining(m, sessions) <= 0)
   }
 
-  const activeExams = exams.filter(e => !isExamCompleted(e))
-  const completedExams = exams.filter(e => isExamCompleted(e))
+  function isExamPast(exam: Exam) {
+    return exam.exam_date < todayISO()
+  }
+
+  function isExamArchived(exam: Exam) {
+    return !exam.keep_active && (isExamCompleted(exam) || isExamPast(exam))
+  }
+
+  const activeExams = exams.filter(e => !isExamArchived(e))
+  const archivedExams = exams.filter(isExamArchived)
   const atExamLimit = !isPro && activeExams.length >= 1
 
   async function handleAddExam(e: React.FormEvent<HTMLFormElement>) {
@@ -99,6 +107,16 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
     setExams(prev => prev.map(e => e.id === updated.id ? updated : e))
   }
 
+  async function handleRestoreExam(examId: string) {
+    try {
+      const supabase = getSupabaseClient()
+      const updated = await updateExam(supabase, examId, { keep_active: true })
+      handleExamUpdated(updated)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to restore exam')
+    }
+  }
+
   function handleMaterialAdded(material: StudyMaterial) {
     setMaterials(prev => [...prev, material])
     startRegen(() => { regenAfterMaterialChange() })
@@ -134,23 +152,26 @@ export default function MaterialsClient({ userId, plan, initialExams, initialMat
         />
       ))}
 
-      {completedExams.length > 0 && (
+      {archivedExams.length > 0 && (
         <div>
           <button
-            onClick={() => setShowCompletedExams(v => !v)}
+            onClick={() => setShowArchivedExams(v => !v)}
             className="w-full flex items-center justify-center gap-2 text-xs text-[#A38F86] hover:text-[#5C4A45] transition py-2"
           >
             <CheckCircle size={13} className="text-[#7BA87B]" />
-            {showCompletedExams ? 'Hide' : 'Show'} completed ({completedExams.length})
+            {showArchivedExams ? 'Hide' : 'Show'} archived ({archivedExams.length})
           </button>
-          {showCompletedExams && completedExams.map(exam => (
+          {showArchivedExams && archivedExams.map(exam => (
             <ExamCard
               key={exam.id}
               exam={exam}
               plan={plan}
               materials={materials.filter(m => m.exam_id === exam.id)}
               sessions={sessions}
+              isArchived
+              isCompleted={isExamCompleted(exam)}
               onDeleteExam={handleDeleteExam}
+              onRestoreExam={handleRestoreExam}
               onExamUpdated={handleExamUpdated}
               onMaterialAdded={handleMaterialAdded}
               onMaterialUpdated={handleMaterialUpdated}
@@ -274,7 +295,10 @@ interface ExamCardProps {
   plan: string
   materials: StudyMaterial[]
   sessions: StudySession[]
+  isArchived?: boolean
+  isCompleted?: boolean
   onDeleteExam: (id: string) => void
+  onRestoreExam?: (id: string) => void
   onExamUpdated: (e: Exam) => void
   onMaterialAdded: (m: StudyMaterial) => void
   onMaterialUpdated: (m: StudyMaterial) => void
@@ -282,7 +306,7 @@ interface ExamCardProps {
   onSummaryClick: (m: StudyMaterial) => void
 }
 
-function ExamCard({ exam, plan, materials, sessions, onDeleteExam, onExamUpdated, onMaterialAdded, onMaterialUpdated, onMaterialDeleted, onSummaryClick }: ExamCardProps) {
+function ExamCard({ exam, plan, materials, sessions, isArchived, isCompleted, onDeleteExam, onRestoreExam, onExamUpdated, onMaterialAdded, onMaterialUpdated, onMaterialDeleted, onSummaryClick }: ExamCardProps) {
   const [expanded, setExpanded] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -450,7 +474,16 @@ function ExamCard({ exam, plan, materials, sessions, onDeleteExam, onExamUpdated
             className="flex items-center gap-3 text-left flex-1 min-w-0"
           >
             <div className="min-w-0">
-              <p className="font-semibold text-[#3D2B26] truncate">{exam.subject}</p>
+              <p className="font-semibold text-[#3D2B26] truncate">
+                {exam.subject}
+                {isArchived && (
+                  <span className={`ml-2 text-[10px] font-medium uppercase tracking-wide rounded-full px-1.5 py-0.5 ${
+                    isCompleted ? 'bg-[#E3EBDF] text-[#5E7A56]' : 'bg-[#F0E4D6] text-[#9C7E63]'
+                  }`}>
+                    {isCompleted ? 'Completed' : 'Incomplete'}
+                  </span>
+                )}
+              </p>
               <p className="text-xs text-[#A38F86] mt-0.5">
                 {new Date(exam.exam_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 {' · '}
@@ -463,13 +496,24 @@ function ExamCard({ exam, plan, materials, sessions, onDeleteExam, onExamUpdated
               {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </span>
           </button>
-          <button
-            onClick={() => { setEditForm({ subject: exam.subject, exam_date: exam.exam_date, priority: exam.priority, revision_days: exam.revision_days }); setEditing(true) }}
-            className="ml-2 shrink-0 p-1.5 text-[#C4B3AC] hover:text-[#5C4A45] transition"
-            title="Edit exam"
-          >
-            <Pencil size={14} />
-          </button>
+          {isArchived && onRestoreExam && (
+            <button
+              onClick={() => onRestoreExam(exam.id)}
+              className="ml-2 shrink-0 p-1.5 text-[#C4B3AC] hover:text-[#5C4A45] transition"
+              title="Restore to active"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
+          {!isArchived && (
+            <button
+              onClick={() => { setEditForm({ subject: exam.subject, exam_date: exam.exam_date, priority: exam.priority, revision_days: exam.revision_days }); setEditing(true) }}
+              className="ml-2 shrink-0 p-1.5 text-[#C4B3AC] hover:text-[#5C4A45] transition"
+              title="Edit exam"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
           <button
             onClick={() => onDeleteExam(exam.id)}
             className="shrink-0 p-1.5 text-[#C4B3AC] hover:text-[#C47070] transition"

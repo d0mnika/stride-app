@@ -22,23 +22,20 @@ export default async function DashboardPage() {
 
   const today = todayStr()
 
-  const [profile, exams, materials, sessions, calendarEvents] = await Promise.all([
+  // Single round trip for everything the dashboard needs — these queries are
+  // all independent of each other, so fetching them sequentially in separate
+  // waves only adds latency. recurringEvents/blockedDays are caught individually
+  // since those tables were added in migrations 0002/0003 and may not exist yet.
+  const [profile, exams, materials, sessions, calendarEvents, allSchedulesInitial, recurringEvents, blockedDays] = await Promise.all([
     getProfile(supabase, user.id),
     getExams(supabase, user.id),
     getAllMaterials(supabase),
     getSessionsByUser(supabase, user.id),
     getCalendarEvents(supabase, user.id, today, addDays(today, 180)),
+    getSchedules(supabase, user.id, addDays(today, -90), addDays(today, 180)),
+    getRecurringEvents(supabase, user.id).catch(() => [] as Awaited<ReturnType<typeof getRecurringEvents>>),
+    getBlockedDays(supabase, user.id, today, addDays(today, 180)).catch(() => [] as Awaited<ReturnType<typeof getBlockedDays>>),
   ])
-
-  // These tables are added in migrations 0002/0003 — fall back to [] if not applied yet
-  let recurringEvents: Awaited<ReturnType<typeof getRecurringEvents>> = []
-  let blockedDays: Awaited<ReturnType<typeof getBlockedDays>> = []
-  try {
-    ;[recurringEvents, blockedDays] = await Promise.all([
-      getRecurringEvents(supabase, user.id),
-      getBlockedDays(supabase, user.id, today, addDays(today, 180)),
-    ])
-  } catch { /* migrations not yet applied */ }
 
   const nightStart        = profile?.night_start         ?? '23:00'
   const nightEnd          = profile?.night_end           ?? '07:00'
@@ -58,7 +55,7 @@ export default async function DashboardPage() {
       .map(d => ({ ...d, availableMinutes: Math.min(d.availableMinutes, dailyStudyMinutes) }))
   }
 
-  let allSchedules = await getSchedules(supabase, user.id, addDays(today, -90), addDays(today, 180))
+  let allSchedules = allSchedulesInitial
 
   // Auto-generate schedule on first visit or when all future slots are consumed.
   const hasRemainingWork     = materials.some(m => calculateRemaining(m, sessions) > 0)

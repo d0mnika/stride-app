@@ -18,15 +18,66 @@ export default function PrivacyPage() {
 
       <div className="max-w-3xl mx-auto px-6 pt-10 pb-16">
         <h1 className="font-palatino text-3xl font-bold text-[#3D2B26] mb-2">Privacy Policy</h1>
-        <p className="text-sm text-[#8C7B75] mb-10">Last updated: May 2026</p>
+        <p className="text-sm text-[#8C7B75] mb-2">APP &amp; WEBSITE</p>
+        <p className="text-sm text-[#8C7B75] mb-10">Last updated: June 15, 2026</p>
 
         <div className="space-y-8 text-[#5C4A45] text-[15px] leading-relaxed">
 
           <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">1. Who we are</h2>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">1. Data Controller</h2>
             <p>
-              Stride is a study planning application operated by an individual developer.
-              If you have any questions about this policy, you can contact us at{' '}
+              The controller of your personal data is Dominika Dobranowska, located at: ul. Górskiego 6, 00-033 Warsaw, Poland.
+              Contact:{' '}
+              <a href="mailto:strideapp.contact@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
+                strideapp.contact@gmail.com
+              </a>. No Data Protection Officer has been appointed.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">2. Purposes and Legal Bases</h2>
+            <p className="mb-3">We process your data to:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li><strong>Provide Stride Services:</strong> Account management and study schedules (Basis: Art. 6(1)(b) GDPR – contract performance). Providing an email is a contractual requirement; an account cannot be created without it.</li>
+              <li><strong>Operate the Marketing Website:</strong> Ensuring correct display and security of the site (Basis: Art. 6(1)(f) GDPR – legitimate interest).</li>
+              <li><strong>Process Payments:</strong> Stripe Pro subscriptions (Basis: Art. 6(1)(b) GDPR).</li>
+              <li><strong>AI Features:</strong> Summaries (Basis: Art. 6(1)(a) GDPR – your consent via feature use).</li>
+              <li><strong>Legal Obligations:</strong> Financial record-keeping (Basis: Art. 6(1)(c) GDPR).</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">3. Categories of Collected Data</h2>
+            <ul className="list-disc pl-6 space-y-2">
+              <li><strong>App Users:</strong> Email, display name, study data (exams, materials), preferences, payment identifiers, AI-submitted text.</li>
+              <li><strong>Website Visitors:</strong> Technical data in server logs, such as IP addresses and timestamps (processed automatically for technical maintenance and security).</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">4. Data Recipients and International Transfers</h2>
+            <p className="mb-3">We use: Supabase (database), Stripe (payments), Groq/OpenAI (AI), and Vercel (hosting). Data is transferred to the USA based on:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>An Adequacy Decision (EU-U.S. Data Privacy Framework), or</li>
+              <li>Standard Contractual Clauses (SCCs) approved by the European Commission.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">5. Data Retention</h2>
+            <p>
+              Account data is kept until you delete your account. Billing records are retained for 7 years to comply with Polish tax laws.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">6. Your Rights</h2>
+            <p className="mb-3">
+              You have the right to: access, rectify, or erase ("right to be forgotten") your data, restrict processing,
+              data portability, and the right to object. Consent for AI features can be withdrawn at any time.
+            </p>
+            <p>
+              Email:{' '}
               <a href="mailto:strideapp.contact@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
                 strideapp.contact@gmail.com
               </a>.
@@ -34,105 +85,29 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">2. What data we collect</h2>
-            <p className="mb-3">We collect the following personal data when you use Stride:</p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Account data:</strong> your email address and optional display name, provided at sign-up.</li>
-              <li><strong>Study data:</strong> exams, study materials, schedule slots, and study sessions you create inside the app.</li>
-              <li><strong>Usage preferences:</strong> settings such as your nightly study window, session length, and daily study goal.</li>
-              <li><strong>Payment data:</strong> if you subscribe to Stride Pro, payment is processed by Stripe. We store only your Stripe customer ID and subscription ID — we never see or store your card details.</li>
-              <li><strong>AI-generated content:</strong> if you use the AI summary feature, the text you submit is sent to a third-party AI provider (Groq / OpenAI) and the resulting summary is stored in your account.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">3. How we use your data</h2>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>To provide and operate the Stride service.</li>
-              <li>To generate and recalculate your study schedule.</li>
-              <li>To process subscription payments via Stripe.</li>
-              <li>To improve the application (aggregated, anonymous usage patterns only).</li>
-              <li>To contact you about your account or service-related updates.</li>
-            </ul>
-            <p className="mt-3">We do not sell your personal data to third parties.</p>
-          </section>
-
-          <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">4. Legal basis for processing (GDPR)</h2>
-            <p>If you are located in the EU or EEA, we process your data on the following legal bases:</p>
-            <ul className="list-disc pl-6 space-y-2 mt-3">
-              <li><strong>Contract:</strong> processing necessary to provide the service you signed up for.</li>
-              <li><strong>Legitimate interests:</strong> improving the app and preventing fraud.</li>
-              <li><strong>Consent:</strong> for any optional features (e.g. AI summaries) where you explicitly submit data.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">5. Data storage and security</h2>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">7. Right to Complain</h2>
             <p>
-              Your data is stored in Supabase (PostgreSQL database hosted on AWS). All data is encrypted in
-              transit (HTTPS) and at rest. Access is protected by row-level security policies — you can only
-              read your own data.
+              You may lodge a complaint with the President of the Personal Data Protection Office (UODO) in Poland.
+              Website:{' '}
+              <a href="https://uodo.gov.pl/" target="_blank" rel="noopener noreferrer" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
+                https://uodo.gov.pl/
+              </a>.
             </p>
           </section>
 
           <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">6. Third-party services</h2>
-            <p className="mb-3">Stride uses the following third-party services:</p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Supabase</strong> — database and authentication.</li>
-              <li><strong>Stripe</strong> — payment processing. Subject to Stripe's own privacy policy.</li>
-              <li><strong>Groq / OpenAI</strong> — AI summaries (only when you use the feature). Text you submit is subject to their data policies.</li>
-              <li><strong>Vercel</strong> — hosting and edge functions.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">7. Cookies</h2>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">8. Cookies</h2>
             <p>
-              Stride uses a single authentication session cookie set by Supabase to keep you logged in.
-              We do not use advertising or tracking cookies. No third-party tracking scripts are loaded on our pages.
+              We use a single authentication cookie set by Supabase to keep you logged in.
+              We do not use advertising, analytics, or tracking cookies.
             </p>
           </section>
 
           <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">8. Your rights</h2>
-            <p className="mb-3">Under GDPR and applicable privacy laws, you have the right to:</p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>Access the personal data we hold about you.</li>
-              <li>Correct inaccurate data.</li>
-              <li>Delete your account and all associated data — you can do this directly from the Account page at any time.</li>
-              <li>Export your data in a portable format.</li>
-              <li>Object to or restrict processing in certain circumstances.</li>
-            </ul>
-            <p className="mt-3">
-              To exercise any of these rights, email us at{' '}
-              <a href="mailto:strideapp.contact@gmail.com" className="text-[#C8A7A1] underline hover:text-[#A38F86]">
-                strideapp.contact@gmail.com
-              </a>. We will respond within 30 days.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">9. Data retention</h2>
-            <p className="mb-3">
-              We retain your data for as long as your account is active. If you delete your account
-              (via the Account page or by contacting us), all personal data — including your exams,
-              materials, sessions, and profile — is deleted immediately from our systems.
-            </p>
+            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">9. Automated Decision-Making</h2>
             <p>
-              We may retain billing-related records (e.g. Stripe transaction IDs) for up to 7 years
-              to comply with financial record-keeping obligations under Polish law. These records contain
-              no study data and are held solely for tax and legal compliance purposes.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="font-palatino text-xl font-bold text-[#3D2B26] mb-3">10. Changes to this policy</h2>
-            <p>
-              We may update this policy from time to time. Significant changes will be communicated
-              via email or an in-app notice. Continued use of Stride after changes constitutes acceptance
-              of the updated policy.
+              Our study plan algorithm analyzes data to optimize schedules. This does not produce legal effects
+              or significantly affect you under Art. 22 GDPR.
             </p>
           </section>
 

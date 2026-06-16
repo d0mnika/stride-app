@@ -1,0 +1,1 @@
+ALTER TABLE exams ADD COLUMN IF NOT EXISTS keep_active boolean NOT NULL DEFAULT false;

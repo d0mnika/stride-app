@@ -355,7 +355,15 @@ export default function DashboardClient({
             const activeExams: React.ReactNode[] = []
             const completedExams: React.ReactNode[] = []
 
-            exams.forEach(exam => {
+            const PAST_MESSAGES = [
+              "The exam is done. Every page you studied built something lasting — don't forget that.",
+              "Not every plan survives real life. You showed up anyway, and that matters more than you know.",
+              "You did what you could. Rest, then start the next one stronger.",
+              "Progress isn't always finishing — sometimes it's just not giving up. You didn't give up.",
+              "One exam doesn't define your journey. What you learned stays with you. Keep going.",
+            ]
+
+            exams.forEach((exam, examIdx) => {
               const examMaterials = materials.filter(m => m.exam_id === exam.id)
               if (examMaterials.length === 0) return
 
@@ -364,16 +372,21 @@ export default function DashboardClient({
               )
 
               const isCompleted = examMaterials.every(m => calculateRemaining(m, sessions) <= 0)
+              const isPast      = daysUntil < 0 && !isCompleted && !exam.keep_active
 
               const card = (
-                <div key={exam.id} className={`rounded-xl border px-5 py-4 shadow-[0_2px_8px_rgba(163,143,134,0.1)] ${isCompleted ? 'border-[#B5C4AA] bg-[#F0EDE8]' : 'border-[#EDEAE3] bg-[#FAF9F7]'}`}>
+                <div key={exam.id} className={`rounded-xl border px-5 py-4 shadow-[0_2px_8px_rgba(163,143,134,0.1)] ${
+                  isCompleted ? 'border-[#B5C4AA] bg-[#F0EDE8]' :
+                  isPast      ? 'border-[#D4C4B0] bg-[#FAF6F1]' :
+                                'border-[#EDEAE3] bg-[#FAF9F7]'
+                }`}>
                   <div className="flex items-baseline justify-between mb-3">
                     <div className="flex items-center gap-2">
                       {isCompleted && <CheckCircle size={13} className="text-[#7BA87B] shrink-0" />}
-                      <p className={`text-sm font-semibold ${isCompleted ? 'text-[#4D6A49]' : 'text-[#3D2B26]'}`}>{exam.subject}</p>
+                      <p className={`text-sm font-semibold ${isCompleted ? 'text-[#4D6A49]' : isPast ? 'text-[#7A6352]' : 'text-[#3D2B26]'}`}>{exam.subject}</p>
                     </div>
                     <p className="text-xs text-[#A38F86]">
-                      {isCompleted ? 'Done' : daysUntil > 0 ? `${daysUntil}d left` : daysUntil === 0 ? 'Today!' : 'Past'}
+                      {isCompleted ? 'Done' : isPast ? 'Incomplete' : daysUntil > 0 ? `${daysUntil}d left` : 'Today!'}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2.5">
@@ -389,7 +402,7 @@ export default function DashboardClient({
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-[#EDEAE3] overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-[#7BA87B]' : 'bg-[#C8A7A1]'}`}
+                              className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-[#7BA87B]' : isPast ? 'bg-[#C4A882]' : 'bg-[#C8A7A1]'}`}
                               style={{ width: `${Math.min(100, pct)}%` }}
                             />
                           </div>
@@ -397,10 +410,15 @@ export default function DashboardClient({
                       )
                     })}
                   </div>
+                  {isPast && (
+                    <p className="mt-3 text-xs text-[#9C7E63] italic leading-relaxed">
+                      {PAST_MESSAGES[examIdx % PAST_MESSAGES.length]}
+                    </p>
+                  )}
                 </div>
               )
 
-              if (isCompleted) completedExams.push(card)
+              if (isCompleted || isPast) completedExams.push(card)
               else activeExams.push(card)
             })
 
@@ -414,7 +432,7 @@ export default function DashboardClient({
                       className="w-full flex items-center justify-center gap-2 text-xs text-[#A38F86] hover:text-[#5C4A45] transition py-2"
                     >
                       <CheckCircle size={13} className="text-[#7BA87B]" />
-                      {showCompleted ? 'Hide' : 'Show'} completed ({completedExams.length})
+                      {showCompleted ? 'Hide' : 'Show'} archived ({completedExams.length})
                     </button>
                     {showCompleted && (
                       <div className="flex flex-col gap-5 mt-3">

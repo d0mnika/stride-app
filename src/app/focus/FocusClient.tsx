@@ -71,6 +71,14 @@ function FocusSession({ material, durationSec, sound, onDone, onCancel }: FocusS
 
   const gainRef = useRef<GainNode | null>(null)
 
+  // Dark-brown status bar while in focus session
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    const prev = meta?.getAttribute('content') ?? '#F5F1EB'
+    meta?.setAttribute('content', '#1A0E0A')
+    return () => { meta?.setAttribute('content', prev) }
+  }, [])
+
   const { state, formattedRemaining, formattedElapsed, start, pause, resume, finish } = useTimer({
     durationSec,
     onComplete() {},
@@ -128,10 +136,13 @@ function FocusSession({ material, durationSec, sound, onDone, onCancel }: FocusS
   const progress    = state.durationSec > 0 ? state.elapsedSec / state.durationSec : 0
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col items-center justify-center select-none">
+    <div className="fixed inset-0 z-50 bg-[#1A0E0A] flex flex-col items-center justify-center select-none">
 
       {/* Top bar */}
-      <div className="absolute top-6 left-0 right-0 flex items-center justify-between px-6">
+      <div
+        className="absolute left-0 right-0 flex items-center justify-between px-6"
+        style={{ top: 'calc(1.5rem + env(safe-area-inset-top))' }}
+      >
         <div>
           <p className="text-xs font-medium uppercase tracking-widest text-gray-600">Studying</p>
           <p className="text-sm font-semibold text-gray-200 mt-0.5 max-w-[200px] truncate">{material.title}</p>
@@ -157,7 +168,10 @@ function FocusSession({ material, durationSec, sound, onDone, onCancel }: FocusS
       </div>
 
       {/* Quote */}
-      <p className="absolute top-24 text-xs text-gray-700 text-center max-w-xs px-6 italic leading-relaxed">
+      <p
+        className="absolute text-xs text-[#6B4D44] text-center max-w-xs px-6 italic leading-relaxed"
+        style={{ top: 'calc(6rem + env(safe-area-inset-top))' }}
+      >
         &ldquo;{quote}&rdquo;
       </p>
 
@@ -184,11 +198,11 @@ function FocusSession({ material, durationSec, sound, onDone, onCancel }: FocusS
       {!earlyPrompt && !isCompleted && (
         <div className="relative w-64 h-64">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="44" fill="none" stroke="#1f2937" strokeWidth="4" />
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#3D2B26" strokeWidth="4" />
             <circle
               cx="50" cy="50" r="44"
               fill="none"
-              stroke="#e5e7eb"
+              stroke="#C8A7A1"
               strokeWidth="4"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 44}`}

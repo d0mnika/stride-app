@@ -393,6 +393,7 @@ export function calculateStreak(
 export function checkCrunchMode(input: SchedulerInput): CrunchWarning[] {
   const warnings: CrunchWarning[] = []
   const examById = new Map(input.exams.map(e => [e.id, e]))
+  const today = todayStr()
 
   for (const material of input.materials) {
     const rem = calculateRemaining(material, input.sessions)
@@ -400,6 +401,7 @@ export function checkCrunchMode(input: SchedulerInput): CrunchWarning[] {
 
     const exam = examById.get(material.exam_id)
     if (!exam) continue
+    if (exam.exam_date < today) continue
 
     const lastStudyDate = addDays(exam.exam_date, -(exam.revision_days + 1))
     const relevantDays = input.availableDays.filter(d => d.date <= lastStudyDate)

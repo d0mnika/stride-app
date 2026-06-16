@@ -17,7 +17,7 @@ export default function BottomNav({ current }: Props) {
   return (
     <nav
       className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#F5F1EB]/97 backdrop-blur-md border-t border-[#EDEAE3] rounded-t-2xl shadow-[0_-4px_20px_rgba(163,143,134,0.1)]"
-      style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}
+      style={{ paddingBottom: '8px' }}
     >
       <div className="flex items-center justify-around h-16">
         {TABS.map(({ href, label, icon: Icon }) => {
