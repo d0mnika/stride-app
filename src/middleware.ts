@@ -7,7 +7,7 @@ const PUBLIC_ROUTES = ['/login', '/signup', '/api/stripe/webhook', '/privacy', '
 // Authenticated users are redirected away from these routes only
 const AUTH_ONLY_REDIRECT = ['/login', '/signup']
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request })
   const supabase = createMiddlewareClient(request, response)
 
