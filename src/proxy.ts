@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createMiddlewareClient } from '@/lib/supabase/middleware'
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/signup', '/api/stripe/webhook', '/privacy', '/terms']
+const PUBLIC_ROUTES = ['/login', '/signup', '/api/stripe/webhook', '/privacy', '/terms', '/sw.js', '/manifest.json']
 
 // Authenticated users are redirected away from these routes only
 const AUTH_ONLY_REDIRECT = ['/login', '/signup']
@@ -47,6 +47,6 @@ export const config = {
      * - public folder files (SVGs, images, etc.)
      * - auth/callback (must be reachable without a session)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|auth/callback).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$|auth/callback).*)',
   ],
 }
