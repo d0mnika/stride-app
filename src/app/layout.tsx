@@ -28,17 +28,17 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: { apple: '/icons/apple-touch-icon.png' },
   formatDetection: { telephone: false },
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'apple-mobile-web-app-title': 'Stride',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Stride" />
-      </head>
-      <body className="min-h-full flex flex-col">
+<body className="min-h-full flex flex-col">
         <ServiceWorkerRegistration />
         {children}
       </body>
