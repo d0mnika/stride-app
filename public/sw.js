@@ -1,4 +1,4 @@
-const CACHE = 'stride-v2'
+const CACHE = 'stride-v3'
 
 // App-shell routes to pre-cache on install
 const PRECACHE = ['/dashboard', '/focus', '/timer', '/materials', '/settings', '/calendar']
