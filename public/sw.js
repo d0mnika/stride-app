@@ -1,4 +1,4 @@
-const CACHE = 'stride-v5'
+const CACHE = 'stride-v6'
 
 // App-shell routes to pre-cache on install
 const PRECACHE = ['/dashboard', '/focus', '/timer', '/materials', '/settings', '/calendar']
@@ -22,12 +22,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 
-  // Never intercept: Supabase, Next.js API routes, auth, or non-GET requests
+  // Never intercept: Supabase, Next.js API routes, auth, non-GET, or app icons
   if (
     event.request.method !== 'GET' ||
     url.hostname.includes('supabase.co') ||
     url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/auth/')
+    url.pathname.startsWith('/auth/') ||
+    url.pathname.includes('touch-icon') ||
+    url.pathname.includes('apple-touch')
   ) {
     return
   }
